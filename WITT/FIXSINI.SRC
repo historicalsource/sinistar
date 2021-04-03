@@ -1,0 +1,27 @@
+	IFE	Version-17.
+fixsini
+	PUSHORG	$6C2B		* Remove 4 lines from SiStopChk
+	RPT	10.,nop
+	PULLORG
+***
+*	to be replaced by ...
+***
+	PUSHORG	$6BC5
+	jsr	100$		* Patch LONG vel.
+	PULLORG
+	PUSHORG	$6BD2
+	jsr	100$		* Patch SHORT vel.
+	PULLORG
+	PUSHORG	CR2SAVE
+100$	jsr	newvel		* < Patched over >
+	tst	SinGrave
+	beq	99$
+	jsr	ScreenChk
+	bcs	99$
+	CLRD
+99$	rts
+	PULLORG	CR2SAVE
+	IFGT	CR2SAVE-CR2LEN
+	ERR	CR2 OVFL
+	ENDIF	CR2
+	ENDIF	Version-17.

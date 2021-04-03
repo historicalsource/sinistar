@@ -1,0 +1,22 @@
+	INCLUDE	START
+	INCLVER	SAM,SINISTAR.EQU
+FIXLSSINI
+
+* don't allow a live sinistar to leave sector
+	PUSHORG	LSSINI
+	JMP	100$
+	PULLORG
+* * *	PUSHORG	ROMSAVE
+	PUSHORG	HISAV
+100$
+* * *
+	LDD	FINISH		is sinistar alive?
+	CMPD	#ALIVE
+	BNE	12$
+	RTS			yes, don't let it leave sector
+12$
+* * *
+	jsr	Sinhibit	* Re-initialize Sinistar attack personality.
+	JMP	LSSINI+3
+* * *	PULLORG	ROMSAVE
+	PULLORG	HISAV

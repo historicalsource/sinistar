@@ -1,0 +1,8 @@
+	include	start
+	INCLVER	SAM,Sinistar.equ
+
+	INCLVER	RICH,rich.sym
+	INCLVER	RICH,zstblimp
+
+	ENDTEST
+	END

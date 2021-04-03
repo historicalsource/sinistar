@@ -1,0 +1,127 @@
+	MESSG	"			DEFINING TEXT"
+	NLIST
+*****
+*
+* TEXT
+*	This macro positions to any place on the screen.  Note that it
+*	1) Does not automatically get messages erased (like DISPLAY does)
+*	2) Does not depend on the player number (like DISPLAY does)
+*
+*****
+TEXT	MACRO	L1,S1
+	NLIST
+.$DLOFF	SET	L1
+.$DSOFF	SET	S1
+.$COLR	SET	$100
+.$DISP	SET	rts
+	LIST
+	NMLIST
+	ENDM
+
+	LIST
+	MESSG	"			DEFINING PHRASE"
+	NLIST
+*****
+*
+* PHRASE	COLOR,SIZE,<LIST,OF,WORDS>
+* WORD		COLOR,SIZE,SINGLEWORD
+*
+*	COLOR	may be BLACK, BLUE, RED or YELLOW
+*	SIZE	may be 35 for 3x5
+*		    or 68 for 6x8
+*
+* Example:
+*	LINE	RED,35,<hello,mike>
+*
+* Bugs:
+*	No error is reported if you forget to DISPLAY before the PHRASE.
+*	No error is reported if you forget to PHRASE before the WORD.
+*	The WORD macro does not actually use the equates CA, CB, etc. but
+*		instead generates the correct values.  This works only for
+*		alphanumerics (0-9, A-Z and ' ').
+*
+*****
+PHRASE	MACRO	C1,S1,W1,W2,W3,W4,W5,W6,W7,W8
+	NLIST
+	IFNIDN	<S1>,<35>
+.$DLOFF	SET	.$DLOFF-2
+	ENDIF
+	LIST
+	ldx	#.$DLOFF!<8+.$DSOFF
+	jsr	.$DISP
+	NMLIST
+	WORD	C1,S1,W1
+	WORD	C1,S1,W2
+	WORD	C1,S1,W3
+	WORD	C1,S1,W4
+	WORD	C1,S1,W5
+	WORD	C1,S1,W6
+	WORD	C1,S1,W7
+	WORD	C1,S1,W8
+.$DLOFF	SET	.$DLOFF-4
+	IFNIDN	<S1>,<35>
+.$DLOFF	SET	.$DLOFF-2
+	ENDIF
+	BLIST
+	ENDM
+
+	LIST
+	MESSG	"			DEFINING WORD"
+	NLIST
+WORD	MACRO	COLOR,SIZ,TXT
+	IFNB	<TXT>
+	BLIST
+	IFN	COLOR-.$COLR
+	ldb	#COLOR
+.$COLR	SET	COLOR
+	ENDIF
+	NMLIST
+	IFNDEF	_TXT
+	PUSHORG	MESSAV
+_TXT	SET	*
+	IRPC	CC,<TXT>
+	IFLE	'CC-'9
+	fcb	CC
+	ELSE
+	IFE	'CC-'-
+	fcb	$27
+	ELSE
+	IFGE	'CC-'a
+	fcb	'CC-'a+11.
+	ELSE
+	fcb	'CC-'A+11.
+	ENDIF
+	ENDIF
+	ENDIF
+	ENDR
+	fcb	$8A
+	PULLORG	MESSAV
+	IFGT	MESSAV-MESLEN
+	BLIST
+	ERR	* C OVFL
+	ENDIF
+	ENDIF
+	BLIST
+	lda	#.TXT
+	jsr	outpSIZ
+	NMLIST
+	IFNDEF	.TXT
+	PUSHORG	PHRSAV
+	fdb	_TXT
+.TXT	SET	PHRNUM
+	IFGE	PHRNUM-$FF
+	BLIST
+	ERR	* N OVFL
+	ENDIF
+PHRNUM	SET	PHRNUM+1
+	PULLORG	PHRSAV
+	IFGT	PHRSAV-PHRLEN
+	BLIST
+	ERR	* P OVFL
+	ENDIF
+	ENDIF
+	BLIST
+	ENDIF
+	ENDM
+
+	LIST

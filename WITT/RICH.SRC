@@ -1,0 +1,17 @@
+	NLIST
+	include	start
+	INCLVER	SAM,sinistar.equ
+	INCLVER	RICH,rich.equ		* Rich's equate changes
+	LIST
+Rich
+	INCLVER	RICH,rich.sym
+	INCLVER	WITT.DARK,work.sym
+
+	INCLVER	SAM,samfixes
+	INCLVER	RICH,richfixes
+	INCLVER	NOAH,noahfixes
+	INCLVER	BOB,bobfixes
+
+	LOCAL
+* * *	INCLVER	RICH,zstblg		* To be made into file for demo.
+	INCLVER	RICH,zwashodds		* Modified range computation.

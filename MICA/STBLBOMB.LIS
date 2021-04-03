@@ -1,0 +1,14 @@
+
+                                28943F  ***
+                                28944F  *	Psuedo Warrior bombing in orbit. (TASKLIST 8/16)
+                                28945F  ***
+                                28946F+ 	TABLE	stblbomber
+     60B5                       28949G  stblbomber
+     60B5   7FFF 1FFF 48EC      28975F  	fdb	($7FFF),($1FFF),asrd3
+     60BB   0064 0100 48F0      28976F  	fdb	(0100.),($0100),asrd1
+     60C1   0040 00C0 48F0      28977F  	fdb	(0064.),($00C0),asrd1
+     60C7   0020 00A0 48F0      28978F  	fdb	(0032.),($00A0),asrd1
+     60CD   0010 0080 48F2      28979F  	fdb	(0016.),($0080),asrd0
+     60D3   0000 0000 48F2      28980F  	fdb	(0000.),($0000),asrd0
+                                28981F+ 	ENDTBL
+                                29002F  

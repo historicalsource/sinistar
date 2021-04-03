@@ -1,0 +1,378 @@
+	INCLUDE	[SAM]START
+	INCLVER	SAM,SINISTAR.EQU
+
+
+
+	PUSHORG	ROMSAV
+
+	VECTOR	POWVECT
+	CLR	HSTDMRQ		Clear HSTD Page display flag on powerup
+	RTS
+
+******************************************************************************
+*
+* HIGH SCORE TO DATE/MARQUEE PAGES Task
+*   This routine displays the HSTD page, pauses, then draws the SiniMarquee
+*   After a second pause, a jump to IAMODE is taken
+*
+*   This routine is called by Rich's attract mode stuff
+*
+* Expects:  Task Workspace pointer in Y
+
+	ROUTINE	ATTRACT
+
+	LDX	#ALHSTD		Get operator flag to allow
+	JSR	RCMOSA		  HSTD table
+	LBEQ	10$		  and branch out if not allowed
+
+	INC	HSTDMRQ		Set the HSTD/Marquee flag
+
+	LDA	#%00110011	Allow Player 1/2 start, FIRE, SINIBOMB
+	STA	PANMASK
+
+	JSR	CLRSCR		Clear the entire screen
+
+	LDA	PMEMCTL		Get the DMA-Inhibit control byte
+	PSHS	A,Y		  and save it with the ever popular Y register
+	ANDA	#!N4		Turn off the inhibit
+	STA	PMEMCTL		  and store the off-value
+ 	STA	MEMCTL		  and de-inhibit the DMA
+
+	LDX	#$822E		Screen address for HIGHEST SCORE
+	LDY	#CMOSHSC	Highest Score itself
+	INC	DISSIZ		If non-zero then DISNUM/INT use 6x8 characters
+	JSR	DISNUM		Display this number
+	LEAY	8,Y		HIGHEST SCORE initials
+	LDX	#$826A		Screen Address for initials
+	JSR	DISINT		Do them
+	TEXT	$84,$8A		Now tell the world that's this is our Sinihero
+	PHRASE	RED,68,SINI,STAR
+	LEAX	-42.,X		Put the "-" [dash] character
+	LDA	PMEMCTL		Turn off DMA-inhibit again
+	ANDA	#!N4
+	STA	PMEMCTL
+	STA	MEMCTL
+	LDA	#CDASH		  between SINI
+	JSR	OUTCHR		  and STAR
+
+	TEXT	$78,$59		Now for the CMOS saved scores
+	PHRASE	RED,68,SINIMMORTALS
+	LDA	PMEMCTL		Turn off DMA-inhibit again
+	ANDA	#!N4
+	STA	PMEMCTL
+	STA	MEMCTL
+
+	LDX	#$7000		Starting line for CMOS scores
+	LDY	#CMOSHSC	Starting address of scores
+	CLR	DISSIZ		Now we want 3x5 characters
+	JSR	NEXTL		Go draw the bunch
+
+	TEXT	$43,$50
+	PHRASE	RED,68,SURVIVORS,TODAY
+
+	LDX	#$3B00		Starting line for RAM scores
+	LDY	#RAMHSC		Starting address of scores
+	JSR	NEXTL		Draw this bunch
+
+	PULS	A,Y		Fetch DMA inhibit and workspace pointer
+	STA	PMEMCTL		Restore DMA
+	STA	MEMCTL
+
+* Now, create a task that will force the background to color $48 for
+*   as long as the HSTD page stays up
+	NEW_SLEEP	TASK1,MAKBAK,OMTLEN+2
+	LDD	#(60.*5)	Let the task live for 5 seconds
+	STD	OMTLEN,X	  and let the page stay up for the same
+	JSR	TIMER
+
+******************************************************************************
+*
+* Marquee Page
+*   By Ken Lantz and Mike Metz
+*
+10$	PSHS	Y		Now resave Y through the next trial
+
+	LDA	#%00110011	Set PANMASK to allow
+	STA	PANMASK		  PLAYER 1/2 Start, Fire and Sinibomb buttons
+
+	JSR	CLRSCR		Clear that ol' whole-screen again
+	JSR	DCREDITS
+
+
+	IFDEF	KENSMARQ  * Defining this includes Ken's Marquee Display
+	JSR	MARQUEE
+	ELSE
+* To patch in Ken's Marquee, overwrite this Text/Phrase combination
+*   with a JSR MARQUEE and several NOPs.  
+	TEXT	$58,$65
+	PHRASE	RED,68,SINISTAR
+	TEXT	$54,$99
+	PHRASE	RED,35,TM
+	ENDIF
+
+	LDB	#$CC		Get message "shadow" color
+	LDX	#CMOSOPE	Cmos location of operator message line 1
+	LDY	#$3425		Screen address for text
+	JSR	OPMDRW		Draw it
+	LDB	#$33		Line 1 "foreground" color
+	LEAY	-1,Y		Bump screen location one left
+	JSR	OPMDRW		Draw text again
+
+	LDB	#$CC		Same as above, but with message line 2
+	LDX	#CMOSO2
+	LDY	#$2C25
+	JSR	OPMDRW
+	LDB	#$22
+	LEAY	-1,Y
+	JSR	OPMDRW
+
+
+	LDD	#$1C0		Countdown value
+	STD	MARQCNT		Save it for guess what
+
+	PULS	Y		Restore Y
+
+	CHANGE_SLEEP	TASK1,HERE
+
+	PSHS	Y
+
+	LDD	MARQCNT		Wake up here.  When MARQCNT bottoms out,
+	SUBD	#1		  restart the system.
+	STD	MARQCNT
+	BNE	124$
+	CLR	HSTDMRQ
+	JMP	IAMODE
+
+124$	CMPD	#$100		For the first bunch of passes, leave the screen
+	LBHS	FINIT		  as is.
+
+123$	RANDOM	OSEED1,WORD	Get a random screen location
+	CMPA	#$8E
+	BHI	123$
+	TFR	D,X
+	RANDOM	OSEED2,$C,0	Get a random color
+	LDU	#SINOUT
+	LDB	A,U
+	LDA	#.SINISTAR	Get the Sinistar word value
+	JSR	OUTP68		Go print it out
+
+
+	TEXT	$4A,LEFEDG
+	PHRASE	RED,35,COPYRIGHT,1982,WILLIAMS,ELECTRONICS,INC
+
+FINIT	JSR	DCREDITS
+
+	PULS	Y
+	SLEEP	LOOP	
+
+
+SINOUT	FCB	$11,$22,$33,$44,$55,$66,$99,$AA,$BB,$CC,$DD,$FF
+
+******************************************************************************
+* MAKBAK
+*
+*   A task to force the background to stay a certain color
+*
+*   Expects:  Y to point to workspace
+*	      OMTLEN+0/1 to have number of passes to stay alive
+*
+
+MAKBAK	LDD	OMTLEN,Y	Have we timed out yet?
+	SUBD	#1
+	STD	OMTLEN,Y
+	LBEQ	DIE		Yes, so die
+
+	JSR	DCREDITS
+	LDA	#$48		Otherwise, force feed that byte to Color 0
+	STA	PCRAM
+	SLEEP	LOOP		  and go away
+
+
+*******************************************************************************
+* NEXTL
+*   PRINT OUT A COLUMN OF 10 SCORES AT A TIME
+*   UNTIL 30 ARE PRINTED.
+*	X = STARTING SCREEN LINE (LSBYTE S/B 00)
+*	Y = STARTIN/HIGHEST SCORE OF 30
+*
+*	Registers D,X,Y are trashed
+
+NEXTL	CLRA			Set up counter to zero
+	PSHS	A		  and save on stack
+
+NEXTL2	INC	,S		Increment our line counter
+	LDA	,S
+
+* Get the tens-component of A into A, the units-component into B
+	CLRB
+	PSHS	B
+
+100$	TFR	A,B
+	SUBA	#10.
+	BMI	101$
+	INC	,S
+	BRA	100$
+
+101$	PULS	A
+
+	TSTA			Is A a digit?
+	BNE	2$		  if yes then branch
+	LDA	#CBLANK		  else make it a blank
+
+2$	PSHS	D		Save this divided up digit
+	LEAX	$18,X		SCREEN POS OF NUMBER
+* Ah ... color $63 gives us the wonderful marble effect    =RJM=
+	LDB	#$63
+	JSR	OUTC35		Go print the first digit
+	LDA	1,S		Fetch the second digit
+	JSR	OUTC35		  and print that
+	LDA	#$2B		Bracket character
+	JSR	OUTC35		  and print that
+
+	LDB	#YELLOW		Normal Display Color
+	CMPY	HSLEN1		Is this one of the most-recently entered scores
+	BEQ	200$		Yes, so change the display color
+	CMPY	HSLEN2		Is this perchance the other one?
+	BEQ	200$		No, so use standard color
+	CMPY	HSRLN1		Is this one of the most-recently entered scores
+	BEQ	200$		Yes, so change the display color
+	CMPY	HSRLN2		Is this perchance the other one?
+	BNE	201$		No, so use standard color
+
+200$	LDB	#$47		Get a magenta color
+	STB	PCRAM+$E
+	LDB	#$EE		Use the special effects color
+
+201$	STB	DISCLR		Save it where the display routines can get it
+
+	LEAX	3,X		SCREEN POS OF INITIALS
+	LEAY	8,Y		ADDRESS OF INITIALS
+	JSR	DISINT		DIPLAY INITIALS
+	LEAX	$10,X		SCREEN POS OF SCORE
+	LEAY	-8,Y		ADDRESS OF SCORE
+	JSR	DISNUM		DISPLAY NUMBER
+	LEAY	SCRSIZ,Y	POINT TO NEXT SET OF DATA
+	PULS	D		Restore our split digits
+	TSTB			If the second digit has hit zero
+	BEQ	1$		  we're at the end of the column
+	LEAX	-$337,X		  else goto START OF NEXT LINE
+	BRA	NEXTL2		  and do it all again
+
+1$	CMPA	#$3		Wow!  Column done!  Have we finished 3rd col?
+	BEQ	4$		DID 30, ALL DONE
+	LEAX	$1B10,X		BACK UP TO START OF NEXT COLUMN
+	BRA	NEXTL2		  and go do it all again
+
+4$	PULS	A,PC		ALL DONE
+
+
+******************************************************************************
+* DISNUM
+*
+* DISPLAY THE SCORE
+*	X = ADDRESS OF SCREEN
+*	Y = ADDRESS OF DATA TO BE DISPLAYED
+*	DISSIZ... 0 = 3X5  >0 = 5X7
+*
+
+DISNUM	PSHS	X,Y,D
+	LDB	#4
+
+	EXG	X,Y	RCMOSA NEEDS DATA ADRESS IN X
+
+2$	JSR	RCMOSA
+	BNE	1$	ZEROS
+	TST	DISSIZ
+	BNE	200$
+	LEAY	8,Y
+	BRA	201$
+
+200$	LEAY	14.,Y
+
+201$	DECB
+	BNE	2$
+	BRA	9$
+
+1$	CMPA	#$0F
+	BHI	3$
+	ORA	#$F0	SUPPRESS FIRST ZERO
+
+3$	PSHS	B
+	EXG	X,Y	OUT ROUTINES NEED SCREEN ADDRESS BACK IN X
+	TST	DISSIZ
+	BNE	4$
+
+	LDB	DISCLR	Get display color
+	JSR	OUTB35	WRITE TWO DIGITS
+	BRA	5$
+
+4$	LDB	#WHITE
+	JSR	OUTBCD
+
+5$	PULS	B
+	DECB
+	BEQ	9$		NO MORE TO DISPLAY
+	EXG	X,Y	RCMOSA NEEDS DATA ADRESS IN X
+	JSR	RCMOSA
+	BRA	3$
+9$	PULS	X,Y,D,PC	
+
+
+******************************************************************************
+* DISINT
+*
+* DISPLAY THE INITIALS
+*	X = ADDRESS OF SCREEN
+*	Y = ADDRESS OF DATA TO BE DISPLAYED
+*	DISSIZ... 0 = 3X5, >0 = 5X7
+*
+
+DISINT	PSHS	X,Y,D
+	LDB	#$3
+
+1$	EXG	X,Y	RCMOSA NEEDS DATA ADDRESS IN X
+	JSR	RCMOSA
+	EXG	X,Y	OUT ROUTINES NEED SCREEN ADDRESS IN X
+	PSHS	B
+	TST	DISSIZ
+	BNE	2$
+
+	LDB	DISCLR	Get current display color
+	JSR	OUTC35
+	BRA	3$
+
+2$	LDB	#WHITE
+	JSR	OUTCHR
+
+3$	PULS	B
+	DECB
+	BNE	1$
+	PULS	X,Y,D,PC	
+
+
+******************************************************************************
+* OPMDRW
+*   Operator Message Drawor
+* ENTRY:
+*	X has address in CMOS of text start
+*	Y has screen address for start of text
+
+OPMDRW	PSHS	D,X,Y
+
+	LDA	#OPENLEN
+	PSHS	A
+
+10$	JSR	RCMOSA
+	EXG	X,Y
+	LDB	2,S
+	JSR	OUTCHR
+	EXG	X,Y
+	DEC	,S
+	BNE	10$
+
+	LEAS	1,S
+
+	PULS	D,X,Y,PC
+
+
+	PULLORG	ROMSAV

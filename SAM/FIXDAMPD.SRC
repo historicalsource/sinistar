@@ -1,0 +1,31 @@
+	INCLUDE	START
+	INCLVER	SAM,SINISTAR.EQU
+FIXDAMPDM
+	PUSHORG	ROMSAVE
+
+* romove old task initialization
+	PUSHORG	$5156
+	JMP	100$
+	PULLORG
+100$  	jsr	StartDemo	* Fake the Player 1 button hit.
+  	jmp	Starts		* Sieze control of the system.
+	
+* make old task initialization a subroutine to save rom in patch
+	PUSHORG	$5167
+	RTS
+	PULLORG
+
+* patch task initialization into correct place
+	PUSHORG	$527E
+	JSR	101$
+	PULLORG
+101$	CLRB
+	std	OMTLen+2,X
+	JMP	$5159
+	
+* fix garbage velocity save
+	PUSHORG	$517C
+	ADDD	OMTLEN+2,Y	*   add it to previous s velocity
+	PULLORG
+
+	PULLORG	ROMSAVE	

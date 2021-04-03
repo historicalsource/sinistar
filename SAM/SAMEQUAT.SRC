@@ -1,0 +1,65 @@
+	INCLUDE	START
+
+	SUBTTL	SAM'S EQUATES
+
+SAMEQUATES
+* assembly flags and counters
+TRUE	EQU	-1
+FALSE	EQU	0
+.$TMODE SET	FALSE		initialize tune interpreter off
+ROMSAVE	SET	0		starting address of rom
+BASSAVE	SET	09800		starting address of direct page ram
+RAMSAVE	SET	09900		starting address of extended ram
+SRAMSAV	SET	0D000		starting address of static ram
+HISAV	SET	0E000		starting address of high rom
+
+* hardware constants
+CARRY	EQU	1		* The carry bit position in the CC register
+DRBL	EQU	1		dma read block
+DWBL	EQU	2		dma write block
+DSCY	EQU	4		dma slow cycle
+DZSP	EQU	8		dma zero suppression
+DCNS	EQU	10		dma constant substitution
+DTFL	EQU	20		dma top flavor
+DXWB	EQU	40		dma ex-or write enable bottom pixel
+DXWT	EQU	80		dma ex-or write enable top pixel
+WDOGC	EQU	39		watchdog constant
+DINHIB	EQU	74		DMA inhibit address
+PMEMCTL	EQU	0BFFF		pseudo memory control byte
+STACK	SET	0C000		stack bottom
+	IFNDEF	ROM
+STACK	SET	STACK-100	for DCON
+	ENDIF
+CRAM	EQU	0C000		color ram
+PIA	EQU	0C800		start of pias
+MEMCTL	EQU	0C900		memory control byte
+DCTRL	EQU	0CA00		dma status byte
+DCONS	EQU	0CA01		dma constant
+DSOUR	EQU	0CA02		dma source address
+DDEST	EQU	0CA04		dma destination address
+DHIGH	EQU	0CA06		dma height
+DWIDE	EQU	0CA07		dma width
+SCNLIN	EQU	0CB00		screen vertical line counter
+WDOG	EQU	0CBFF		watchdog address
+
+* game constants
+STACKAL	SET	40		stack allocation
+FUDGE	EQU	20		vertical allowance for objects beam avoidance
+NOBJS	EQU	30		number of object workspaces
+NSTARS	EQU	0A		number of stars
+NTNREPT	EQU	4		maximum number of tune repeat counters
+ODYNOVH	EQU	4		dynamic memory overhead
+SALLOW	EQU	110		extra storage allowance
+*				(max for 1 wake or collision + max block size)
+NINDEXS	EQU	180		maximum number of workspace indexes
+BHSCROL	EQU	8		bottom hard scroll limit
+THSCROL	EQU	6C		top hard scroll limit
+LHSCROL	EQU	10		left hard scroll limit
+RHSCROL	EQU	0F0		right hard scroll limit
+DAMPTIM	EQU	40		scroll damping time delay (in screens)
+SINIHIG	EQU	1A		sinistar height ( bytes)
+SINIWID	EQU	31		sinistar width ( pixels)
+SINILCE	EQU	19		sinistar l axis center offset ( pixels)
+SINISCE	EQU	18		sinistar s axis center offset ( pixels)
+MHPIECE	EQU	10		maximum height of sinistar piece
+NCOLLIS	EQU	0B		number of collision types

@@ -1,0 +1,34 @@
+*****
+*
+* SWITCH	FIREB,OPEN
+*	This routine turns off the machine gun fire.
+*
+* Needs:
+*	NPlayer - to determine if attact mode demo is running
+*	AMDemo	- to determine if in attract mode or game
+*	HSTDMRQ - to determine if in HSTD/MARQUEE page display
+*
+* Returns:
+*	RapTime	= 0 (zero) to turn off rapid fire.
+*
+*****
+	LOCAL
+	IFE	Version-17.
+	PUSHORG	$6CCA
+	ENDIF	Version-17.
+*
+	SWITCH	FIREB,OPEN
+	CLR	RAPTIME		turn off rapid fire
+	TST	HSTDMRQ		If we're in the middle of the HSTD page
+	lbne	rts		  then just return
+	TST	NPLAYER		If there is no player
+	BEQ	1$		  then restart attract mode
+	TST	AMDEMO		If there is a player but this is not demo mode
+	lbeq	rts		  then return
+	CLR	NPLAYER
+1$	CLR	AMDEMO		  else clear demo flags
+	JMP	IAMODE		  and go restart demo
+*
+	IFE	Version-17.
+	PULLORG
+	ENDIF	Version-17.

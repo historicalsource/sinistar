@@ -1,0 +1,495 @@
+*******************
+* SINISTAR MACROS *
+*******************
+
+* assembler extensions:
+
+* repeat
+RPT	MACRO	COUNT,P1,P2,P3,P4,P5,P6,P7,P8,P9
+	NLIST
+	REPT	COUNT
+	IRP	INST,<<P1>,<P2>,<P3>,<P4>,<P5>,<P6>,<P7>,<P8>,<P9>>
+	INST
+	ENDR
+	ENDR
+	LIST
+	ENDM
+
+* hook for a vector patch
+HOOK	MACRO	N1
+	NLIST
+N1	SET	*
+	RPT	3,NOP
+	LIST
+	ENDM
+
+* vector patch
+VECTOR	MACRO	N1
+	BLIST
+	LOCAL
+.$$	SET	*
+	ORG	N1
+	JSR	.$$
+	ORG	.$$
+	HOOK	N1
+	MLIST
+	ENDM
+
+* ROUTINE
+* first occurance	- creates symbol
+* second occurance	- types 'REPLACING' message
+* first occurance	- types 'DUP REPLACE' error message
+ROUTINE	MACRO	N1
+	BLIST
+	IFNDEF	N1
+N1
+	MESSG	"			CREATING N1"
+	ELSE
+	IFNDEF	ZN1
+ZN1
+	MESSG	"						REPLACING N1"
+	ELSE
+	LOCAL
+	MESSG	"DUP						REPLACE N1"
+	ENDIF	
+.$$	SET	*
+	ORG	N1
+	JMP	.$$
+	ORG	.$$
+	ENDIF
+	MLIST
+	ENDM
+
+* push current address on org stack (8 levels) and optionally re-org
+PUSHORG	MACRO	ADR
+	NLIST
+.$PP	SET	.$PP+1
+.$ORG7	SET	.$ORG6
+.$ORG6	SET	.$ORG5
+.$ORG5	SET	.$ORG4
+.$ORG4	SET	.$ORG3
+.$ORG3	SET	.$ORG2
+.$ORG2	SET	.$ORG1
+.$ORG1	SET	.$ORG0
+.$ORG0	SET	*
+	IFNB	<ADR>
+	ORG	ADR
+	IFE	ROMSAV-*
+	ROMTEST	(*!>12.)
+	ENDIF
+	ENDIF
+	LIST
+	ENDM
+
+* pull current address off of org stack and optionally reset symbol address
+PULLORG	MACRO	ADR
+	NLIST
+	IFNB	<ADR>
+ADR	SET	*
+	ENDIF
+	ORG	.$ORG0
+.$PP	SET	.$PP-1
+.$ORG0	SET	.$ORG1
+.$ORG1	SET	.$ORG2
+.$ORG2	SET	.$ORG3
+.$ORG3	SET	.$ORG4
+.$ORG4	SET	.$ORG5
+.$ORG5	SET	.$ORG6
+.$ORG6	SET	.$ORG7
+	LIST
+	ENDM
+
+* equate a symbol to a value if not already defined
+SYMVER	MACRO	N1,A1
+	NLIST
+	IFNDEF	N1
+N1	EQU	A1
+	ELSE
+	IFN	N1-A1
+	ERR	N1,A1 conflict
+	ENDIF
+	ENDIF
+	LIST
+	ENDM
+
+*****
+*
+* PAD	[label,] bytes
+*
+*	"PAD bytes" will pad an RMB "bytes" long.
+*	"PAD label,bytes" will create labelSAV followed by the RMB "bytes"
+*			  long and follow that with labelLEN.
+*
+*****
+PAD	MACRO	a1,a2
+	BLIST
+	IFNB	<a2>
+a1SAV	SET	*
+	RMB	a2
+a1LEN	RMB	0
+	ELSE
+	RMB	a1
+	ENDIF
+	MLIST
+	ENDM	PAD
+
+* End tests
+ENDTEST	MACRO
+	BLIST
+	IFGE	BASSAV-(D_P+1)!<8
+	MESSG	"DP OVFL"
+	ENDIF
+	IFN	.$PP
+	ERR	PUL/PUS MM
+	ENDIF
+	IFN	1+*
+	ERR	ORG
+	ENDIF
+	IFLT	MESS2-ROMSAVE
+	ERR	ROM OVFL
+	ENDIF
+	IFLT	MESLEN-MESSAV
+	ERR	MESROM OVFL
+	ENDIF
+	IFLT	INDEXS-RAMSAV
+	ERR	RAM OVFL
+	ENDIF
+	IFLT	OUTCHR-HISAV
+	ERR	HIROM OVFL
+	ENDIF
+	MLIST
+	ENDM
+
+*********************
+
+* pseudo op-codes:
+
+* negate D
+NEGD	MACRO
+	BLIST
+	COMA
+	NEGB
+	SBCA	#-1
+	MLIST
+	ENDM
+
+* clear D
+CLRD	MACRO
+	BLIST
+	CLRA
+	CLRB
+	MLIST
+	ENDM
+
+* D = Absolute Value of D
+ABSD	MACRO
+	BLIST
+	tsta
+	bge	*+6
+	NEGD
+	MLIST
+	ENDM	ABSD
+
+*********************
+
+* game macros:
+
+* random number generator
+RANDOM	MACRO	SEED,RNG,OFS
+	BLIST
+	IFIDN	<RNG>,<WORD>
+	LDA	#SEED
+	JSR	RAND8
+	ELSE
+	IFIDN	<RNG>,<BYTE>
+	LDA	#SEED
+	JSR	RAND8B
+	ELSE
+	IFB	<RNG>
+	LDA	#SEED
+	ELSE
+	LDD	#SEED!<8+RNG
+	ENDIF
+	JSR	RAND8R
+	ENDIF
+	IFNB	<OFS>
+	ADDA	#OFS
+	ENDIF
+	ENDIF
+	MLIST
+	ENDM
+
+* fast random number generator
+FRANDOM	MACRO	SOFF,RNG,OFS
+	BLIST
+	IFIDN	<RNG>,<WORD>
+	LDD	SOFF+SEEDS
+	ELSE
+	LDA	SOFF+SEEDS
+	IFNIDN	<RNG>,<BYTE>
+	IFNB	<RNG>
+	LDB	#RNG
+	ENDIF
+	MUL
+	IFNB	<OFS>
+	ADDA	#OFS
+	ENDIF
+	ENDIF
+	ENDIF
+	MLIST
+	ENDM
+
+* play a tune
+TUNE	MACRO	NUM
+	BLIST
+	JSR	NEWTUNE
+	FDB	NUM
+	MLIST
+	ENDM
+
+* handle a switch
+SWITCH	MACRO	N1,S1
+	BLIST
+.$$	SET	*
+	IFIDN	<S1>,<OPEN>
+	ORG	N1
+	ELSE
+	ORG	N1+2
+	ENDIF
+	FDB	.$$
+	ORG	.$$
+	MLIST
+	ENDM
+
+* make a new scanner object   pass scanner position in D, returns scanwsa in X
+*	NEW_SCAN	[characteristic descriptor address]
+NEW_SCAN MACRO	CHR
+	BLIST
+	JSR	GETSCN
+	FDB	CHR
+	MLIST
+	ENDM
+
+*********************
+
+* multitasking macros:
+
+* make a new sleep task
+*  forms:
+*	NEW_SLEEP	[sleep list],[wake up address]
+*		returns task workspace address in X
+*	NEW_SLEEP	[sleep list],[wake up address],[size of workspace]
+*		returns task workspace address in X
+NEW_SLEEP MACRO	S_L,W_U,#_B
+	BLIST
+	IFB	<#_B>
+	JSR	SLEEP1
+	FDB	W_U,S_L
+	ELSE
+	IFLE	#_B-OMTLEN
+	ERR	BYTE COUNT ?
+	ENDIF
+	JSR	SLEEP2
+	FDB	W_U
+	FCB	#_B
+	FDB	S_L
+	ENDIF
+	MLIST
+	ENDM
+
+* sleep
+*  forms:
+*	SLEEP	HERE
+*		wakes up after call, reqrs current task workspace address in Y
+*	SLEEP	LOOP
+*		wakes up at last wake up address, reqrs task wsa in Y
+*	SLEEP	[wake up address]
+*		requires current task workspace address in Y
+SLEEP	MACRO	W_U
+	BLIST
+	IFIDN	<W_U>,<HERE>
+	WAKE_AT *+10.
+	ELSE
+	IFNIDN	<W_U>,<LOOP>
+	WAKE_AT W_U
+	ENDIF
+	ENDIF
+	LDD	OINDEX,Y	
+	STD	PRTASK
+	RTS
+	MLIST
+	ENDM
+
+* change sleep list
+*  forms:
+*	CHANGE_SLEEP	[sleep list],HERE
+*		wakes up after call, reqrs current task workspace address in Y
+*	CHANGE_SLEEP	[sleep list],LOOP
+*		wakes up at last wake up address, reqrs task wsa in Y
+*	CHANGE_SLEEP	[sleep list],[wake up address]
+*		requires current task workspace address in Y
+CHANGE_SLEEP MACRO S_L,W_U
+	BLIST
+	LDX	#S_L
+	IFIDN	<W_U>,<HERE>
+	JSR	C1SLEEP
+	ELSE
+	IFIDN	<W_U>,<LOOP>
+	JMP	C3SLEEP
+	ELSE
+	LDD	#W_U
+	JMP	C2SLEEP
+	ENDIF
+	ENDIF
+	MLIST
+	ENDM
+
+* change wake up address to here, requires current task workspace address in Y
+WAKE_HERE MACRO
+	WAKE_AT	*+5
+	ENDM
+
+* change wake up address, requires current task workspace address in Y
+*	WAKE_AT	[wake up address]
+WAKE_AT	MACRO	W_U
+	LDD	#W_U
+	STD	OEXEC,Y
+	ENDM
+
+*********************
+
+* tune interpreter instructions:
+
+* interuption tune priority
+.IPRIO	MACRO	NUM
+	BLIST
+	IFN	.$TMODE
+	MESSG	"NO END"
+	ELSE
+.$TMODE	SET	TRUE
+	ENDIF
+	FCB	NUM
+.$SOUND	SET	-1
+.$PRIO	SET	-1
+	ENDM
+
+* set tune priority
+.PRIO	MACRO	NUM
+	TUNECK
+	SOUNDCK
+	PRIOCK
+.$PRIO	SET	NUM
+	ENDM
+
+* play a sound
+.SOUND	MACRO	NUM
+	TUNECK
+	SOUNDCK
+.$SOUND	SET	NUM!X3F
+	ENDM
+
+* time delay
+.TIME	MACRO	NUM
+	TUNECK
+	IFGE	.$PRIO
+	SOUNDCK
+	FCB	.$PRIO+40,NUM
+	ELSE		
+	IFGE	.$SOUND
+	FCB	.$SOUND!+0C0,NUM
+	ELSE
+	MESSG	"NO SOUND OR PRIO"
+	ENDIF
+	ENDIF
+.$SOUND	SET	-1
+.$PRIO	SET	-1
+	ENDM
+
+* repeat tune
+.REPEAT	MACRO	NUM,ADR
+	TUNECK
+	SOUNDCK
+	PRIOCK
+	FCB	NUM,ADR-*
+.$TMODE	SET	FALSE
+	ENDM
+
+* stop tune
+.STOP	MACRO
+	TUNECK
+	SOUNDCK
+	PRIOCK
+	FCB	0
+.$TMODE	SET	FALSE
+	MLIST
+	ENDM
+
+*********************
+
+* sub-macros:
+
+SOUNDCK	MACRO
+	IFGE	.$SOUND
+	FCB	.$SOUND+80
+.$SOUND SET	-1
+	ENDIF
+	ENDM
+
+PRIOCK	MACRO
+	IFGE	.$PRIO
+	MESSG	"EXTRA PRIO"
+.$PRIO	SET	-1	
+	ENDIF
+	ENDM
+
+TUNECK	MACRO
+	IFE	.$TMODE
+	MESSG	"NO IPRIO"
+	.IPRIO	1
+	ENDIF
+	ENDM
+
+ROMTEST	MACRO	ADR
+	IFE	ADR-1
+	CPYCHK	1
+	ENDIF
+	IFE	ADR-2
+	CPYCHK	2
+	ENDIF
+	IFE	ADR-3
+	CPYCHK	3
+	ENDIF
+	IFE	ADR-4
+	CPYCHK	4
+	ENDIF
+	IFE	ADR-5
+	CPYCHK	5
+	ENDIF
+	IFE	ADR-6
+	CPYCHK	6
+	ENDIF
+	IFE	ADR-7
+	CPYCHK	7
+	ENDIF
+	IFE	ADR-8
+	CPYCHK	8
+	ENDIF
+	IFE	ADR-$E
+	CPYCHK	E
+	ENDIF
+	IFE	ADR-$F
+	CPYCHK	F
+	ENDIF
+	ENDM
+
+CPYCHK	MACRO	ROM
+	IFNDEF	CRROM
+	LIST
+CRROM	SET	*
+	fcc	"COPYRIGHT 1983 WILLIAMS ELECTRONICS, INC."
+	NLIST
+	ENDIF
+	ENDM
+
+*	This inclver appears here so that DISPLAY may use the macros!
+	INCLVER	RICH,DISPLAY

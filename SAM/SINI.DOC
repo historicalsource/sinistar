@@ -1,0 +1,347 @@
+
+dynamic storage allocation
+
+* special trash compact after process or collision
+SPTRASH	STX	TEMP		save X for collision > uses A,B,U
+* trash compact one block or more if low
+TRASCOM	LDX	TRASBUB		get trash compactor bubble  > uses A,B,X,U
+* allocate dynamic storage
+*	pass # bytes in D, returns ws addr in X, free space in D, overfl in CC
+ALLOC	PSHS	U		save regs  > uses A,B,X
+* de-allocate dynamic storage  pass workspace address in X
+DEALLOC	PSHS	D,U		save regs  > uses none
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+multitasking
+
+* make a new sleep task
+*  forms:
+*	NEW_SLEEP	[sleep list],[wake up address]
+* sleep
+*  forms:
+*	SLEEP	HERE
+* change sleep list
+*  forms:
+*	CHANGE_SLEEP	[sleep list],HERE
+* change wake up address to here, requires current task workspace address in Y
+WAKE_HERE MACRO
+* change wake up address, requires current task workspace address in Y
+*	WAKE_AT	[wake up address]
+* last task on list (except free list) dummy workspace and index
+LTWSI	FDB	LTWSI
+* last task on list (except free list)
+1$	LDX	TLEVEL		set pointer for list to keystone index
+* last task on free list dummy workspace and index
+LFTWSI	FDB	LFTWSI
+* last task on free list
+1$	LDD	#TASK0+OTKEYI	set next task ptr to free list keystone index
+* change sleep address and list
+*  pass addr on stack, list keystn in X, current task workspace address in Y
+C1SLEEP	PULS	D
+* change sleep address and list
+*  pass address in D, list keystn in X, current task workspace address in Y
+C2SLEEP	STD	OEXEC,Y
+* change sleep list
+*  pass sleep list keystone address in X, current task workspace address in Y
+* new sleep,  pass after call: wakeup address, sleep list keystone address
+SLEEP1	PSHS	D,Y,U		save registers   > uses X
+* new sleep with extra bytes,
+*  after call: wakeup address, size of workspace, sleep list keystone address
+SLEEP2	PSHS	D,Y,U		save registers   > uses X
+* die		current task workspace address in Y
+	ROUTINE	DIE
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+scanner
+
+* make a new scanner object   pass scanner position in D, returns scanwsa in X
+*	NEW_SCAN	[characteristic descriptor address]
+* scanner position update task
+SCANVEL	LDD	SLPOS		compute change in l scroll relative to player
+* get scanner object	char after call, positn in D, returns scanner wsa in X
+	ROUTINE	GETSCN
+* scroll scanner
+	ROUTINE	SCROLSC
+* invisible scanner task on screen
+1$	BSR	UPSCAN		update scanner position, save Y, uses A,B,X,U
+* visible scanner task on screen
+1$	JSR	ERASCAN		erase scanner image  save Y, uses A,B
+* scanner die	current scanner task workspace address in Y
+	ROUTINE	SCANDIE
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+screen display
+
+* start object list
+EXEC	DEC	ESTATE		are we overloaded?
+* get object add char and image	  pass char addr in D, returns obj wsa in X
+GETCOBJ	PSHS	D		> uses A,B,X   save characteristics
+* add image to object	      pass image descriptor addr in D and obj wsa in X
+IMGOBJ	PSHS	U,D		> uses none
+* get object from free list		returns object wsa in X
+	ROUTINE	GETOBJ
+* put object on screen list		pass object wsa in X
+PUTOBJ	PSHS	U,Y,A		find position on list > uses none
+* kill object on screen list		pass object wsa in X
+KILLOBJ	LDD	#EKOBJ		> uses A,B
+* erase kill object
+EKOBJ	LDX	OIDESC,Y	> uses A,B,X,Y
+* change image			pass object wsa in Y
+	ROUTINE	CHGOBJ
+* display object		pass object wsa in Y
+DOBJECT	LDX	OIDESC,Y	> uses A,B,X
+* off screen
+OBJOFF	LDX	OCHAR,Y
+* change object post draw routine
+POSTCHG	LDA	OSVEL,Y		restore s velocity > uses A,B
+* paste an image on top of a screen object	pass object wsa in Y,
+*	 main image descriptor in X, paste on image descriptor in OEFFECT
+	ROUTINE	PASTEON
+* kill object
+	ROUTINE	KOBJECT
+
+
+scanner/screen transition
+
+* visible scanner task off screen
+VSCAN	BSR	ERASCAN		erase scanner image  save Y, uses A,B
+* invisible scanner task off screen
+ISCAN	BSR	SCROLSC		scroll scanner
+* visible scanner object onto screen transition
+VSCRON	WAKE_AT	1$		change wake-up addr for on screen scanner loop
+* scanner object on screen transition   scanner wsa in Y, char in U
+	ROUTINE	PLACEON
+* place clipping object on top edge
+CONTOP	LDD	#0FF00+DINHIB-1	initialize l position
+* place clipping object on bottom edge
+CONBOT	LDA	[OIDESC,X]	get height, initialize l position
+* place clipping object on right edge
+CONRIG	LDA	#0FF		initialize s position
+* place clipping object on left edge
+CONLEF	CLR	OLEFT,X		initialize s position
+* place non-clipping on top edge
+NONTOP	LDD	#0FF00+DINHIB-1	initialize l position
+* place non-clipping on bottom edge
+NONBOT	CLR	OLPOS,X		get height, initialize l position
+* place non-clipping on right edge
+NONRIG	LDA	ODWIDTH,X	initialize s position
+* place non-clipping on left edge
+NONLEF	CLR	OLEFT,X		initialize s position
+*
+* invisible scanner object onto screen transition
+ISCRON	WAKE_AT	1$		change wake-up addr for on screen scanner loop
+* scanner object off screen
+SCROFF	LDX	OCHAR,Y		get char desc table addr > uses A,B,X
+
+
+collision detection and handling
+
+* initialize collision for an object type
+MAKECOL	MACRO	N1
+* handle a collision
+COLLIDE	MACRO	N1,N2
+* pixel collision check routine
+	ROUTINE	PIXCHK
+* collision handling
+9$	LDX	SAVEXOB		compute collision matrix address
+* bounce routine		pass ship wsa addresses in X and Y
+	ROUTINE	BOUNCE
+
+
+switch handling
+
+* handle a switch
+SWITCH	MACRO	N1,S1
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+tune interpreter
+
+* play a tune
+TUNE	MACRO	NUM
+* interuption tune priority
+.IPRIO	MACRO	NUM
+* set tune priority
+.PRIO	MACRO	NUM
+* play a sound
+.SOUND	MACRO	NUM
+* time delay
+.TIME	MACRO	NUM
+* repeat tune
+.REPEAT	MACRO	NUM,ADR
+* stop tune
+.STOP	MACRO
+* new tune		pass tune address in word after call
+	ROUTINE	NEWTUNE
+* tune loader		pass tune address in U
+TNLOAD	LDA	U		fetch first instruction > uses A,B,X,U
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+math functions
+
+* random number generator
+RANDOM	MACRO	SEED,RNG,OFS
+* fast random number generator
+FRANDOM	MACRO	SOFF,RNG,OFS
+*****
+*
+* RECTANG
+*	Rectangular to angle conversion.
+*
+* History:
+*	Written by Sam.  Rich required the work registers to be saved 9/22/82.
+*
+* Needs:
+*	A = LONG distance
+*	B = SHORT distance
+*
+* Returns:
+*	A = Signed angle.  A full circle is 256 degrees.
+*
+*****
+RECTANG	pshs	B,X		* Save work registers
+******
+*
+* SINCOS
+*	Determine the sine and cosine of a signed angle.
+*	(Here, a circle consists of 256 degrees.)
+*
+* Needs:
+*	A = Angle in 1/256ths of a circle.
+*
+* Returns:
+*	A = sine(angle)
+*	B = cosine(angle)
+*
+*****
+SINCOS	PSHS	A,X,U		save angle and registers
+* ranged random byte		pass seedoffset in A, range B, returns number A
+RAND8R	PSHS	B		> uses A,B
+* random byte			pass seedoffset in A, returns number in A
+RAND8B	PSHS	B		> uses A
+* random word			pass seedoffset in A, returns number in D
+RAND8	PSHS	X		> uses A,B
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+* set a list value from A	pass value in A, list addr in word after call
+SETA	PSHS	D,X,U		save all regs > uses none
+* set a list value from D	pass value in D, list addr in word after call
+SETD	PSHS	D,X,U		save all regs > uses none
+* change a list value from A	pass change in A, list addr in word after call
+CHGA	PSHS	D,X,U		save all regs > uses none
+* change a list value from D	pass change in D, list addr in word after call
+CHGD	PSHS	D,X,U		save all regs > uses none
+* raise	a list value		pass change in D, addr of list address - 1 in X
+RAISE	PSHS	X		save regs > uses D,U
+* lower	a list value		pass change in D, addr of list address - 1 in X
+LOWER	PSHS	X		save regs > uses D,U
+
+
+scoring and player status display
+
+* add bcd score to players score	pass score in D
+	ROUTINE	ADDSCOR
+* update 'bonus at' score
+UPBONUS	PSHS	D,X,U
+* update ship display		pass count in A, dma constant in B
+	ROUTINE	UPSHIPS
+* update sinibomb display	pass sinibomb count in A, dma constant in B
+	ROUTINE	UPBOMBS
+* score display task
+	ROUTINE	SCOREDI
+* update score routine
+	ROUTINE	UPSCORE
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+player switching
+
+* switch players		uses sinistar image space
+SWPLAY	PSHS	A,X,Y,U
+
+
+sinistar image data modification
+
+* initialize sinistar
+	ROUTINE	INISINI		> uses none
+* subtract a sinistar piece
+	ROUTINE	SUBPIEC
+* add a sinistar piece
+	ROUTINE	ADDPIEC
+* modify sinistar
+*	pass piece descriptor in X, change collis flag in A, dma ctrl byte in B
+	ROUTINE	MODSINI
+
+
+fragment explosion
+
+* fragment explosion		pass screen workspace in X
+	ROUTINE	FRAGEXP
+
+
+joystick
+
+* joystick routine
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+scrolling
+
+* scrolling routine
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+
+
+clear screen
+
+* clear screen
+	ROUTINE	CLRSCR
+
+
+simple macros
+
+* repeat
+RPT	MACRO	COUNT,P1,P2,P3,P4,P5,P6,P7,P8,P9
+* hook for a vector patch
+HOOK	MACRO	N1
+* vector patch
+VECTOR	MACRO	N1
+* push current address on org stack (8 levels) and optionally re-org
+PUSHORG	MACRO	ADR
+* pull current address off of org stack and optionally reset symbol address
+PULLORG	MACRO	ADR
+* PAD	[label,] bytes
+*
+* End tests
+ENDTEST	MACRO
+* negate D
+NEGD	MACRO
+* clear D
+CLRD	MACRO
+* D = Absolute Value of D
+ABSD	MACRO
+
+
+macros that aid group assembly
+
+* include from version directory
+INCLVER	MACRO	N1,F1
+* ROUTINE
+* first occurance	- creates symbol
+* second occurance	- types 'REPLACING' message
+* first occurance	- types 'DUP REPLACE' error message
+ROUTINE	MACRO	N1
+* equate a symbol to a value if not already defined
+SYMVER	MACRO	N1,A1
+

@@ -1,0 +1,55 @@
+	IFE	Version-17.
+fixkrsini
+	PUSHORG	$59C3
+	jmp	100$
+	PULLORG
+	PUSHORG	ROMSAVE
+100$	tst	PlaGrave
+	lbeq	$59C8
+	New_SLEEP	Task1,200$,OTimer	* Dead man's warp.
+	jmp	9$
+**
+*	Dead player alternative to warp.
+**
+200$	lda	#-1		* Init impulse engines
+	sta	InImpulse	*   on.
+	ldd	#(60.*9/4)	* Wait 2.25 seconds
+	jsr	Timer		*   and then ...
+	clr	InImpulse	* Signal Sinistar to fall to pieces.
+	clr	InWarp		* End warp (since player is dead).
+**
+*	ldd	#(60.*2)	* Wait another 2 seconds for explosion
+*	jsr	Timer		*   of Sinistar.
+*	lda	#-1		* Re-init the
+*	sta	InImpulse	*   impulse engines for the next time.
+**
+99$	ldd	#CPlayer	* Enable player collisions
+	std	OChar+WPLAYER	*   because SAM DESTROYED THEM !!!!
+	jmp	Die		* That's all for this task!
+	PULLORG	ROMSAVE
+*
+	PUSHORG	$59D4
+9$	rmb	0
+	PULLORG
+***
+*
+***
+	PUSHORG	$5B03		* Patch KRSINI
+	jmp	99$		*   to die with player enabled.
+	PULLORG
+*****
+*
+* Sorry,
+*	But orbital distances weren't fixed as part of the distance
+*	corrections of earlier days.  These work funny with the player.
+*
+*****
+	PUSHORG	$5B2C
+	jsr	getldist
+	PULLORG
+*
+	PUSHORG	$5B43
+	jsr	getsdist
+	PULLORG
+*
+	ENDIF	Version-17.

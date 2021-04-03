@@ -1,0 +1,15 @@
+	NLIST
+	INCLVER	RICH,SYMCHK	* Symbol definition checker.
+*****
+*
+* This module checks that each of the symbols needed are defined.
+* If they weren't defined, the result would be that routines in this
+* directory would be created instead of replacing (overriding) the
+* stubs in earlier parts of the version release.
+*
+*****
+	SYMVER	MESLEN,MESLEN	is missing from RICHS.SYM	(MesLength)
+	SYMVER	PHRLEN,PHRLEN	is missing from RICHS.SYM	(PhrLength)
+	SYMVER	PLSHOO,PLSHOO	is missing from RICHS.SYM	(PlShoot)
+
+	LIST

@@ -1,0 +1,55 @@
+	INCLVER	RICH,ZapRTS		* Copyright checking RTS macro
+
+	PUSHORG	ROMSAVE
+	SUBTTL	EMPTY - Conditionally displays EMPTY message in sinibomb area.
+*****
+*
+* EMPTY
+*	A test is made to determine if there are sinibombs in the bomb bay.
+*	If the bay is empty, the word "EMPTY" appears in the sinibomb display.
+*
+* Needs:
+*	Bombs	= The number of Sinibombs in the bomb bay.
+*	scoreaddr - SHORT position of player 1 or player 2 message area
+*
+* Returns:
+*	Condition code Z bit = 1 if there are bombs in bay.
+*		       Z bit = 0 if the bomb bay is empty.
+*
+*****
+	Routine	Empty
+	tst	Bombs		* If there are bombs in the bomb bay,
+	bne	99$		*   no warning message is needed.
+	pshs	A,B,X,Y,CC	* Save work registers
+	TEXT	$8A,$00		* Warn player of empty bomb bay.
+	lda	#.$DLOFF	* <Normally the PHRASE macro is used here to
+	ldb	ScoreAddr	*  display the word, bu the TEXT MACRO is not
+	tfr	D,X		*  set up to handle two player switching yet.>
+	WORD	YELLOW,68,EMPTY
+	puls	A,B,X,Y,CC	* Restore work registers
+99$	rts
+
+	SUBTTL	NOTEMPTY - Erases EMPTY message from sinibomb display area.
+*****
+*
+* NOTEMPTY
+*	Erases the "EMPTY" message from the sinibomb display area.
+*
+* Needs:
+*	scoreaddr - SHORT position of player 1 or player 2 message area
+*
+* Returns:
+*	Nothing - but only if the copyright is still intact.
+*
+*****
+	Routine	NotEmpty
+	pshs	A,B,X,Y		* Save work registers
+	TEXT	$8A,$00		* Clear the message regarding an empty bomb bay
+	lda	#.$DLOFF	* <Normally the PHRASE macro is used here to
+	ldb	ScoreAddr	*  display the word, bu the TEXT MACRO is not
+	tfr	D,X		*  set up to handle two player switching yet.>
+	WORD	BLACK,68,EMPTY
+	puls	A,B,X,Y		* Restore work registers
+	ZAPrts			* RTS if copyrighted.
+
+	PULLORG	ROMSAVE

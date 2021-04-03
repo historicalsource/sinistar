@@ -1,0 +1,29 @@
+	PUSHORG	ROMSAVE
+
+	SubTtl	- Difficulty tables
+
+.DTime	fdb	DTime
+	fcb	6
+	fdb	.PWor		* Workers
+	fcb	14
+	fdb	.PWar		* Warriors
+	fcb	3
+	fdb	.PPl5		* Plan5's
+	fcb	$7F
+	fdb	.WAgg		* Warrior aggression
+	fcb	0
+	PAD	.DTi,10
+
+.PWor	fdb	Pop+1
+	fcb	0
+
+.PWar	fdb	Pop+4
+	fcb	0
+
+.PPl5	fdb	Pop+13
+	fcb	0
+
+.Wagg	fdb	WAgg
+	fcb	0
+
+	PULLORG	ROMSAVE

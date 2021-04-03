@@ -1,0 +1,81 @@
+	INCLUDE	START
+	INCLVER	SAM,SINISTAR
+
+BARGRAPH
+	PUSHORG	RAMSAVE
+PGRAPH	RMB	10	\	previous bar graph lengths ( values/4)
+GRAPH	RMB	10	/	bar graph values
+	PULLORG	RAMSAVE
+
+	PUSHORG	ROMSAVE
+
+	VECTOR	INIVECT
+	LDD	#9999		draw bar graph right end line
+	LDX	#75DA		
+1$	STD	X		
+	LEAX	100,X		
+	CMPX	#8EDA		
+	BLO	1$		
+	LDX	#PGRAPH		set bar graph lengths/zero initial values
+	LDU	#GRAPH		
+	LDD	#0F3F
+2$	STB	A,X		
+	CLR	A,U		
+	DECA			
+	BPL	2$
+	RTS		
+
+	VECTOR	EXEVECT
+	LDA	PANMASK		player flying on?
+	BITA	#8
+	BNE	10$
+	RTS			no?, that's all folks
+*
+10$	LDA	PMEMCTL		update bar graphs: dma inhibit off
+	PSHS	A
+	ANDA	#!N4
+	STA	PMEMCTL
+	STA 	MEMCTL
+	LDA	#1!X4		* * *TEMPORARY FOR DMA BUG
+	STA	DHIGH		set DMA height
+	LDA	#0F		initialize bar number
+	LDX	#PGRAPH
+	LDU	#GRAPH
+1$	LDB	A,U		get new value
+	LSRB			convert to lengths
+	LSRB
+	CMPB	A,X		has it changed?
+	BEQ	4$
+	PSHS	CC		save change
+	STB	A,X		save new length
+	STA	TEMP		save bar #
+	PULS	CC		longer or shorter?
+	BMI	2$
+	EORB	#4		* * *TEMPORARY FOR DMA BUG
+	STB	DWIDE		set DMA width
+	LDB	#11		longer, compute color
+	MUL
+	STB	DCONS		set DMA constant
+	LDA	TEMP		get bar #
+	ADDA	#79		compute screen position
+	LDB	#9B
+	STD	DDEST		set DMA destination
+	BRA	3$
+2$	ADDD	#799B		compute screen position
+	STD	DDEST		set DMA destination
+	COMB			compute width
+	ADDB	#40+9B
+	EORB	#4		* * *TEMPORARY FOR DMA BUG
+	STB	DWIDE		set DMA width
+3$	LDA	#DCNS+DWBL	draw or erase bar
+	STA	DCTRL
+	LDA	TEMP		restore bar # / wait for DMA
+	CLR	DCONS		zero constant
+4$	DECA			done?
+	BGE	1$
+	PULS	A		dma inhibit on
+	STA	PMEMCTL
+	STA 	MEMCTL
+	RTS
+
+	PULLORG	ROMSAVE

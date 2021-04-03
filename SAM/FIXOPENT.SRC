@@ -1,0 +1,34 @@
+	INCLUDE	START
+	INCLVER	SAM,SINISTAR.EQU
+FIXOPENT
+	PUSHORG	ROMSAVE
+
+* fixes operator entry
+	PUSHORG	$8995
+	JSR	100$
+	PULLORG
+100$
+* * *
+	LDA	#98		set direct page
+	TFR	A,DP
+	CLR	NPLAYERS	zeros number of players
+	JSR	INIPIAS		initialize pias
+* * *
+	JMP	SYSTINI		Wipe clean thy slate, oh master
+
+* make pia initialization a subroutine
+	PUSHORG	$2E6E
+	JMP	1$
+	PULLORG		
+1$	STB	BUNITS
+* * *
+	JSR	INIPIAS
+* * *
+	LDA	PIA+6		initialize control panel state
+	JMP	$2E90
+INIPIAS	EQU	$2E71
+	PUSHORG	$2E8D
+	RTS
+	PULLORG
+
+	PULLORG	ROMSAVE

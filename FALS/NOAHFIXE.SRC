@@ -1,0 +1,4 @@
+	Include	[Sam]Start
+
+NoahFixes.src
+*	InclVer NOAH,Fixbomcal			* fix sinibomb calling player

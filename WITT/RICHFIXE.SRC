@@ -1,0 +1,68 @@
+	include	start
+	INCLVER	RICH,rich.equ
+	INCLVER	RICH,Table		* Macro
+PROMS	EQU	1		* Define before burning proms
+richfixes
+***
+*	Define DEMO when assembling this module for a ROM version work file.
+*	This eliminates the overload flash.
+***
+	IFDEF	Proms
+	SYMVER	VRLOAD,VRLOAD
+	PUSHORG	VRLOAD+2
+	nop			* Eliminate overload flash
+	nop			*   by avoiding PCRAM store.
+	PULLORG
+	ENDIF	Proms
+***
+*	This overrides the japzap during development.
+***
+	IFNDEF	Proms
+	PUSHORG	ROMSAVE
+	VECTOR	POWVECT
+	SYMVER	KENCHK,KENCHK
+	clr	KENCHK
+	rts
+	VECTOR	IniVect
+	clr	KenChk
+	rts
+	PULLORG	ROMSAVE
+	SYMVER	ZAPSIN,ZAPSini
+	PUSHORG	ZAPSini		* In the PowVect routine, ignore the
+	tst	$0		*   copyright violation test routine.
+	PULLORG
+	ENDIF	Proms
+*****
+*
+*	<<<<< V17 BUG FIXES >>>>>
+*
+* Notes:
+*	Workers with crystals should check PlaGrave as well as SinGrave
+*	to keep from building the Sinistar when the player is dead.  This
+*	is a current bone.
+*
+*****
+	IFE	Version-17.
+***
+*	New Jap Zapping Table.
+***
+	SYMVER	KENTBL,KENTBL
+	TABLE	KenTbl		* This one is
+	fdb	$6A00		*   as of 3/23 at 8:02 PM
+	fdb	$0000		*   ... Rich.
+	fdb	$0C4A
+	fdb	$1591
+	fdb	$4543
+	fdb	$0150
+	fdb	$3502
+	ENDTBL
+
+	INCLVER	RICH,fixbutton	* FIREB version editing correction
+	INCLVER	RICH,fixiniric	* SINIB demo error and timing correction
+	INCLVER	RICH,fixkrsini	* Dead man's warp correction
+	INCLVER	RICH,fixrisbom	* Value error correction
+	INCLVER	RICH,fixsini	* Sinistar death motion correction
+	INCLVER	RICH,zstblimp	* Impulse engine speed table tuned
+	INCLVER	RICH,zstblbomb	* Demo bombing run speed table tuned
+
+	ENDIF	Version-17.

@@ -1,0 +1,61 @@
+	PUSHORG	ROMSAVE
+	SUBTTL	SETLVX
+	SUBTTL	SETSVX
+*****
+*
+* SETLVX - Set the LONG  velocity of the craft.
+* SETSVX - Set the SHORT velocity of the craft.
+*
+* Needs:
+*	X -> scanner workspace of the craft.
+*	D =  the velocity to be stored (most significant byte = pixels/frame)
+*
+* Returns:
+*	Registers unchanged.
+*
+*****
+	ROUTINE	SetLVX
+	pshs	D,U		* Save work registers
+	ldu	OSSCWSA,X	* If the craft is not on screen,
+	beq	10$		*   then scanner velocities are good enough.
+***
+*	Screen velocity computation
+***
+	std	OLVEL,U		* Set the LONG screen velocity of the object.
+	bra	99$
+***
+*	Scanner velocity computation
+***
+10$	RPT	1,aslb,rola	* Scale up to 1/2 pixels/frame.
+	bcc	11$		* If the value is negative
+	subd	#$80		*   round to more negative.
+	bra	12$
+11$	addd	#$80		* Else, round to more positive.
+12$	sta	OSLVEL,X	* Set the LONG scanner velocity.
+99$	puls	D,U		* Restore work registers
+	rts
+***
+*
+***
+	ROUTINE	SetSVX
+	pshs	D,U		* Save work registers
+	ldu	OSSCWSA,X	* If the craft is not on screen,
+	beq	10$		*   then scanner velocities are good enough.
+***
+*	Screen velocity computation
+***
+	std	OSVEL,U		* Set the SHORT screen velocity of the object.
+	bra	99$
+***
+*	Scanner velocity computation
+***
+10$	RPT	1,aslb,rola	* Scale up to 1/2 pixels/frame.
+	bcc	11$		* If the value is negative
+	subd	#$80		*   round to more negative.
+	bra	12$
+11$	addd	#$80		* Else, round to more positive.
+12$	sta	OSSVEL,X	* Set the SHORT scanner velocity.
+99$	puls	D,U		* Restore work registers
+	rts
+
+	PULLORG	ROMSAVE

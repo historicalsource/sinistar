@@ -1,0 +1,354 @@
+	SUBTTL	INIRICH - Initialization routines for RICH
+	PAGE
+	INCLVER	RICH,table		* ORG Macro
+
+	PUSHORG	ROMSAVE
+*****
+*
+* ExeVect .....	Hooks routine to occur every frame
+* GamVect .....	Hooks routine to occur every game start
+* IAMVect .....	Hooks routine to occur attract mode start
+* IniVect .....	Hooks routine to occur every player ship start
+* PlaVect .....	Hooks routine to occur every player-up start (once/game/player)
+* PowVect .....	Hooks routine to occur every machine power-up start
+*
+*****
+	SUBTTL	EXEVECT - Routines occuring each frame.
+*****
+*	EEEEE  X   X  EEEEE  V   V  EEEEE   CCCC  TTTTT
+*	E       X X   E      V   V  E      C        T
+*	EEEE     X    EEEE   V   V  EEEE   C        T
+*	E       X X   E       V V   E      C        T
+*	EEEEE  X   X  EEEEE    V    EEEEE   CCCC    T
+*****
+	VECTOR	ExeVect		* On each frame of animation
+	jsr	AniSC		* Animate Sinistar for speech calls
+	rts
+***
+*	The characteristics descriptor of the sinibomb will find the
+*	current image descriptor pointing at the RAM area for an image.
+***
+	PUSHORG	CSBomb+OFiDesc
+	fdb	RISBomb+1+2	* First Image Descriptor
+	PULLORG
+*****
+*
+* VECTOR EXEVECT
+*	Every frame.
+*
+*	The sinibomb animation is handled by the executive as follows:
+*	A pointer to the "current" image descriptor is updated in RAM.
+*	Also, the first part of the image descriptor is updated (the second
+*	half remains constant in each descriptor) to point to the new image.
+*
+* Returns:
+*	U,X,Y destroyed
+*
+*****
+	VECTOR	ExeVect		* On each frame of animation.
+	tst	InBombs		* If there bombs to animate
+	bne	2$		*   then animate them.
+	rts			* Else, do nothing.
+2$	ldx	#RISBomb	* X -> RAM image information block
+***
+* The animation will change every other frame
+***
+	inc	,X+		* The first RISBomb byte is a switch set to
+	ble	1$		*   -1 (increments to 0) for the animation to
+	clr	-1,X		*   change images, next time the 0 increments
+	dec	-1,X		*   to 1 and the image is not changed, then the
+	rts			*   switch is reset to the -1 state.
+
+1$	ldy	0,X		* Y -> "current" image descriptor
+	leay	OILen,Y		* Y -> "next" image descriptor
+	cmpy	#(ISBomb+(NISBomb*OILen))
+	blt	IEVBomb		* If there is one, then use that new image.
+	ldy	#ISBomb		* Else, Y -> the "first" image descriptor
+IEVBomb	sty	,X++		* Save the new image pointer and descriptor.
+	leax	8,X		* X -> RAM image area
+	ldy	2,Y		* Y -> "new" image to be copied
+	ldb	#(3*5)
+1$	lda	,Y+
+	sta	,X+
+	decb
+	bgt	1$
+	rts
+
+	SUBTTL	GAMVECT - Routines occuring each game start.
+*****
+*	 GGGG   AAA   M   M  V   V  EEEEE   CCCC  TTTTT
+*	G      A   A  MM MM  V   V  E      C        T
+*	G GGG  AAAAA  M M M  V   V  EEEE   C        T
+*	G   G  A   A  M   M   V V   E      C        T
+*	 GGG   A   A  M   M    V    EEEEE   CCCC    T
+*****
+	VECTOR	GamVect		* On each game start
+	jsr	Copyright	* Get some random value in D
+	std	ASCPtr		*   and save it for confusion.
+*
+	rts
+
+	SUBTTL	IAMVECT - Routines occuring each attract mode start.
+*****
+*	IIIII   AAA   M   M  V   V  EEEEE   CCCC  TTTTT
+*	  I    A   A  MM MM  V   V  E      C        T
+*	  I    AAAAA  M M M  V   V  EEEE   C        T
+*	  I    A   A  M   M   V V   E      C        T
+*	IIIII  A   A  M   M    V    EEEEE   CCCC    T
+*****
+	VECTOR	IAMVect		* At initial attract mode,
+***
+* The attract mode is run twice.  The first time the attract mode is
+* started, AMDemo will be marked to demonstrate the game.  The system
+* will restart and the demo will eventually terminate.  Then, the
+* attract mode is entered the second time and AMDemo is marked not to
+* demonstrate the system.  Instead, the marquis page is started.
+*
+* If AMDemo != 0, then start demonstration.
+* If AMDemo == 0, then mark AMDemo != 0 and start marquis page.
+***
+	tst	AMDemo		*   if the demo is to run,
+	beq	1$		*   then start it up ...
+***
+* Put the system into demo mode (AMDemo != 0)
+***
+	jsr	StartDemo	* Fake the Player 1 button hit.
+	NEW_SLEEP Task1,2$,OMTLen+4 * Start player damping task
+	CLRD			* Zero previous player
+	std	OMTLen,X	*   l velocity and
+	std	OMTLen+2,X	$   s velocity save
+	jmp	Starts		* Sieze control of the system.
+***
+* Do not demo the system (AMDemo == 0)
+***
+1$	inc	AMDemo		* Else, mark the demonstration for later
+	rts			*   and run the marquis.
+***
+* Player damping for attract mode task
+***
+2$	LDX	#WPLAYER	* Get current player
+	LDD	OLVEL,X		*   l velocity and
+	ADDD	OMTLEN,Y	*   add it to previous l velocity
+	ASRA			* Divide by two
+	RORB			*   to compute average
+	STD	OLVEL,X		* Change player l velocity to average
+	STD	OMTLEN,Y	*   and save for next damping
+	LDD	OSVEL,X		* Get current player s velocity and
+	ADDD	OMTLEN+1,Y	*   add it to previous s velocity
+	ASRA			* Divide by two
+	RORB			*   to compute average
+	STD	OSVEL,X		* Change player s velocity to average
+	STD	OMTLEN+2,Y	*   and save for next damping
+	SLEEP	LOOP		* Sleep 1
+
+	SUBTTL	INIVECT - Routines occuring each player ship start.
+*****
+*	IIIII  N   N  IIIII  V   V  EEEEE   CCCC  TTTTT
+*	  I    NN  N    I    V   V  E      C        T
+*	  I    N N N    I    V   V  EEEE   C        T
+*	  I    N  NN    I     V V   E      C        T
+*	IIIII  N   N  IIIII    V    EEEEE   CCCC    T
+*****
+	VECTOR	IniVect		* On each turn start
+	clr	InStun		* Clear Sinistar stun.
+	lda	#-1		* Turn off the
+	sta	InImpulse	*   impulse engines at turn start.
+	clr	PlaGrave	* Remove grave marker.  Player is reborn.
+	clr	SinGrave	* Remove grave marker.  Sinistar is reborn.
+	clr	RapTime		* Turn off machine gun.
+***
+*	Randomize worker and warrior orbits
+***
+	New_Sleep	Task256,100$
+	rts
+
+100$	FRANDOM	OSEED1,BYTE
+	sta	workorbit	* Change the worker orbit
+	sta	warrorbit	*   and the warrior orbit.
+	SLEEP	HERE		* Twelve
+	SLEEP	HERE		*   seconds
+	SLEEP	HERE		*   later ...
+	FRANDOM	OSEED1,BYTE
+	sta	workorbit	* Change the worker orbit again
+*	but not warrorbit	*   but not the warrior orbit this time.
+	SLEEP	HERE		* Twelve
+	SLEEP	HERE		*   seconds
+	SLEEP	100$		*   later, repeat.
+*****
+*
+* VECTOR INIVECT
+*	This is part of the PLAYER TURN initialization.
+*
+*	The image descriptor for the first SiniBomb image is copied into
+*	RAM where the characteristics descriptor for said SiniBomb (which
+*	lies in ROM) will look for the current display image (also stored
+*	in ROM).  The animation routine changes the image address in this
+*	RAM descriptor in order to achieve animation.
+*
+*	Yes, it would be nice if the image descriptor where in ROM.  That
+*	can be changed on the next release.
+*
+* Returns:
+*	U,X,Y destroyed.
+*
+*****
+	LOCAL
+	VECTOR	IniVect
+	ldx	#RISBomb+1+2
+	ldy	#ISBomb		* Y -> the "first" image descriptor
+	ldu	0,Y
+	stu	,X++
+	ldu	#RISBomb+1+2+8
+	stu	,X++
+	ldu	4,Y
+	stu	,X++
+	ldu	6,Y
+	stu	,X++
+	ldx	#RISBomb+1	* X -> RAM image descriptor block
+	jsr	IEVBomb		* Initialize the animation.
+*
+	jsr	dispe		* Erase the player message area
+*
+	clr	SiniSector	* Sinistar sector flag.
+	clr	InWarp		* Player is not warping.
+	clr	InBombs		* No bombs are alive.
+*
+	clr	MesgTime	* Mark no messages displayed
+	dec	MesgTime	*   and the display already erased.
+	New_Sleep	Task64,Erase	* Start the message eraser.
+*
+	clr	ASCTime		* Zero the wait time on pending animation.
+	clr	ASCInt		* Mark the next animation OK to run.
+	ldx	#AniSCF		* Initialize the Sinistar
+	stx	ASCPtr		*   animation to a closed mouth.
+*
+	Routine	ZAPSini
+	tst	KenChk
+	bpl	ADemo		* Continue IniVect
+	New_Sleep	Task1,100$
+	bra	ADemo		* Continue IniVect
+
+100$	jsr	SubPiece
+	SLEEP	LOOP
+
+***
+* The start of each turn is checked for demo mode.
+***
+	Routine	ADemo
+	tst	AMDemo		*   if the system is not in demo mode
+	beq	99$		*   then exit.
+***
+*	Only the current ship will play.
+***
+1$	lda	Ships		* In demo mode, the ship count must be
+	beq	2$		*   zeroed no matter what the normal
+	ldb	#DCNS+DWBL	*   game start number of ships is.
+	jsr	UpShips		* So, all the ships are
+	dec	Ships		*   erased and counted off.
+	bra	1$		* No book-keeping is done on demo ships.
+***
+*	Start with half the bombbay full.  The crystals that are picked up
+*	will show bombs in the second half of the display to be easily seen.
+*	Originally, the bombbay was empty and the transition from EMPTY to
+*	a bomb display was very obvious, but did not allow much demonstration
+*	of the attack on the Sinistar.
+***
+2$	jsr	AddBombs	* Begin with sinibombs
+	inca			*   in the bombbay for the demo attack.
+	cmpa	#(MaxBombs/2)	* Note that half the bombbay is full so that
+	blt	2$		*   crystal pickups are obviously making bombs.
+*
+	New_Sleep	Task1,100$,OTimer	* Start watchdog task.
+	New_Sleep	Task1,CDTask		* Start credits display.
+	New_Sleep	Task2,AMSini,OMTLEN+4	* Start Bob's Sini Task
+	ldd	#(40.*60.)/2			*   which will run for
+	std	OMTLen,X			*   40 seconds
+	CLRD
+	std	OMTLen+2,X
+99$	rts
+***
+*	This is the demo watchdog timer.
+***
+100$	lda	#%00111001	* During the demo, the start buttons and
+	sta	PanMask		*   star scrolling must work.  Fire for HSTD.
+	ldd	#(45.*60.)	* Allow the system to run
+	jsr	Timer		*   for 45 seconds.
+	JMP	DEATH		end demo
+***
+*	During the demonstration, this is the credit display task.
+***
+	ROUTINE	CDTask
+	lda	NPlayer		* During the credit display
+	clr	NPlayer		*   DCREDITS must think this is player #0.
+	jsr	DCredits	* Display the credits on each wake-up.
+	sta	NPlayer		* Restore the actual player number (#1).
+	SLEEP	LOOP
+
+	SUBTTL	PLAVECT - Routines occuring each new player start.
+*****
+*	PPPP   L       AAA   V   V  EEEEE   CCCC  TTTTT
+*	P   P  L      A   A  V   V  E      C        T
+*	PPPP   L      AAAAA  V   V  EEEE   C        T
+*	P      L      A   A   V V   E      C        T
+*	P      LLLLL  A   A    V    EEEEE   CCCC    T
+*****
+	VECTOR	PlaVect		* On each player's game start
+	jsr	empty		* Make player's bomb bay empty
+	rts
+
+	SUBTTL	POWVECT - Routines occuring each machine power-up.
+*****
+*	PPPP    OOO   W   W  V   V  EEEEE   CCCC  TTTTT
+*	P   P  O   O  W   W  V   V  E      C        T
+*	PPPP   O   O  W W W  V   V  EEEE   C        T
+*	P      O   O  W W W   V V   E      C        T
+*	P       OOO    W W     V    EEEEE   CCCC    T
+*****
+	VECTOR	PowVect		* On each power-up
+	clra			* The attract mode is marked to
+	sta	AMDemo		*   start with the marquis page.
+*
+	CLRD			* Initialize the
+	std	ASCPtr		*   Animate Speech Call Pointer to nowhere.
+*
+	pshs	X,U		* Save work registers
+	LDX	#0
+	LDD	#$EF
+	STA	KENCHK
+1$	LEAX	2,X
+	ADDA	#$10
+	BMI	3$
+	LDU	D,X
+	CMPU	100$,X
+	ORCC	#$0A
+	ANDCC	#$DE
+	BNE	2$
+	ORCC	#$0B
+2$	TST	KENCHK
+	BCS	1$
+	BGT	1$
+	INCB
+	STB	KENCHK
+	BCC	1$
+3$	PULS	X,U		* Restore work registers
+*
+	rts
+
+*	TABLE
+	fdb	$5269
+100$	fdb	$6368
+KenTbl	fdb	$6A00		* U
+	fdb	$0000		* U
+	fdb	$FDA0		* U
+	fdb	$9700		* U
+	fdb	$45F1		* U
+	fdb	$4234		* U
+	fdb	$A7BD		* U
+	fdb	$5769
+	fdb	$7474
+*	ENDTBL
+
+	PULLORG	ROMSAVE
+
+	INCLVER	RICH,empty		* "EMPTY" or bombs display.
+	INCLVER	RICH,anisini		* Animate Sinistar

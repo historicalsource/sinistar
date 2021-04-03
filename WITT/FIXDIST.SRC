@@ -1,0 +1,163 @@
+	IFE	Version-17.	* <<< TOP >>>
+*****
+*
+* GET ORBITAL DISTANCE
+*	Determine long (GETLODISTANCE) or short (GETSODISTANCE) orbital
+*	distance of craft from target.
+*
+*	GETLODISTANCE -	Returns the 16-bit LONG orbital distance in pixels.
+*	GETSODISTANCE -	Returns the 16-bit SHORT orbital distance in pixels.
+*
+* Needs:
+*	A = orbit factor (IORBIT or OORBIT)
+*	B = orbit personality (clockwise or counterclockwise)
+*	X -> scanner workspace of the target
+*	Y -> scanner workspace of the craft
+*
+* Returns:
+*	D = the signed 16-bit distance from the target to the craft.
+*
+*****
+	IFE	Version-17.
+	PUSHORG	GetLODistance
+	ENDIF	Version-17.
+	ROUTINE	getlodistance
+	pshs	A,B,X,Y		* Save work registers
+SAVEA	SET	0
+SAVEB	SET	1
+	lda	OSLPOS,X	* Get the LONG scanner
+	clrb			*   distance of the target
+	jsr	asrd2		*   scaled down to pixels.
+	pshs	D
+SAVEA	SET	SAVEA+2
+SAVEB	SET	SAVEB+2
+	jsr	AimFlAng	* A = the angle toward the target.
+	jsr	sincos
+*
+	pshs	A
+	lda	SAVEA,S
+	ldb	SAVEB,S		* Subtract
+	jsr	smul8
+	nega
+	puls	B
+	jsr	smul8
+*
+	addd	0,S
+	std	0,S
+	ldb	OSLVEL,X	* Get the LONG scanner velocity
+	sex			*   in a 16-bit
+	RPT	1,aslb,rola	*   pixel/second value
+	RPT	6,aslb,rola	* In (tasklist) 16 times it will be
+	addd	0,S		*   that many pixels further!
+	std	0,S		* Save it for the subtract
+
+	IFE	Version-17.
+	jmp	222$
+	IFGT	*-$6396
+	ERR	FixDist: GetLODist: ROM OVFL
+	ENDIF
+	PULLORG
+	PUSHORG	CR2SAVE
+222$	rmb	0
+	ENDIF	Version-17.
+
+	clrb			* Get the LONG scanner
+	lda	OSLPOS,Y	*   distance of the craft
+	jsr	asrd2		*   scaled down to pixels.
+	subd	,S++		* Now subtract to determine the distance.
+	leas	2,S		* Clear the stack
+	puls	X,Y		* Restore work registers
+	rts
+
+	IFE	Version-17.
+	PULLORG	CR2SAVE
+	PUSHORG	GetSODistance
+	ENDIF	Version-17.
+
+	ROUTINE	getsodistance
+	pshs	A,B,X,Y		* Save work registers
+SAVEA	SET	0
+SAVEB	SET	1
+	lda	OSSPOS,X	* Get the SHORT scanner
+	clrb			*   distance of the target
+	jsr	asrd2		*   scaled down to pixels.
+	pshs	D
+SAVEA	SET	SAVEA+2
+SAVEB	SET	SAVEB+2
+	jsr	AimFlAng	* A = the angle toward the target.
+	jsr	sincos
+*
+	pshs	B
+	lda	SAVEA,S		* Add
+	ldb	SAVEB,S
+	jsr	smul8
+	puls	A
+	jsr	smul8
+*
+	addd	0,S
+	std	0,S
+	ldb	OSLVEL,X	* Get the LONG scanner velocity
+	sex			*   in a 16-bit
+	RPT	1,aslb,rola	*   pixel/second value
+	RPT	6,aslb,rola	* In (tasklist) 16 times it will be
+	addd	0,S		*   that many pixels further!
+	std	0,S		* Save it for the subtract
+
+	IFE	Version-17.
+	jmp	222$
+	IFGT	*-$63D1
+	ERR	FixDist: GetSODist: ROM OVFL
+	ENDIF
+	PULLORG
+	PUSHORG	CR2SAVE
+222$	rmb	0
+	ENDIF	Version-17.
+
+	clrb			* Get the SHORT scanner
+	lda	OSSPOS,Y	*   distance of the craft
+	jsr	asrd2		*   scaled down to pixels.
+	subd	,S++		* Now subtract to determine the distance.
+	leas	2,S		* Clear the stack
+	puls	X,Y		* Restore work registers
+	rts
+
+	IFE	Version-17.
+	PULLORG
+	ENDIF	Version-17.
+***
+*	<<< Correction to INIRICH.SRC >>>
+***
+	LOCAL
+	PUSHORG	$51A4
+100$	RANDOM	OSEED1,1.	* Pick a random value
+	tsta			*   of 1 or -1
+	bne	101$		*   for a positive or
+	deca			*   negative orbit.
+101$	sta	workorbit	* Change the worker orbit
+	sta	warrorbit	*   and the warrior orbit.
+	SLEEP	HERE		* Twelve
+	SLEEP	HERE		*   seconds
+	SLEEP	HERE		*   later ...
+	RANDOM	OSEED1,1.	* Pick a random value
+	tsta			*   of 1 or -1
+	bne	102$		*   for a positive or
+	deca			*   negative orbit.
+102$	sta	workorbit	* Change the worker orbit again
+*	but not warrorbit	*   but not the warrior orbit this time.
+	SLEEP	HERE		* Twelve
+* * *			      ***
+	jmp	222$		*
+	IFGT	*-$51ED
+	ERR	FixDist: 100$: ROM OVFL
+	ENDIF
+	PULLORG
+	PUSHORG	CR2SAVE
+222$	rmb	0		*
+* * *			      ***
+	SLEEP	HERE		*   seconds
+	SLEEP	100$		*   later, repeat.
+	PULLORG	CR2SAVE
+	IFGT	CR2SAVE-CR2LEN
+	ERR	CR2 OVFL
+	ENDIF
+	ENDIF	Version-17.	* <<< BOTTOM >>>

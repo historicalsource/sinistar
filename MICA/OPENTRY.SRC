@@ -1,0 +1,436 @@
+	INCLUDE	[SAM]START
+
+	INCLVER	SAM,SINISTAR.EQU
+
+	
+	PUSHORG	ROMSAVE
+	ROUTINE	OPENTRY
+
+OPENTRY	JSR	SYSTINI		Boom
+	NEW_SLEEP	TASK1,OPENMS,OHSMMR	Start up the master task
+	JMP	STARTS		Go start up the task system
+
+*
+* High Score To Date Master Task
+*   This one runs until the others are die, and then restarts the system
+*
+
+HSTDMS	LDD	#(60.*1)
+	JSR	TIMER
+
+	LDX	#ALHSTD		Test if operator allows HSTD entry
+	JSR	RCMOSA		  and if not
+	BEQ	10$		  then branch to exit timer
+
+	TFR	Y,U
+
+	LDA	#$13		Initialize for Player ONE
+	STA	SCOREAD
+	LDY	OHSMP1,U
+	JSR	HSTEST		Go test/install player 1 score
+	STA	OHSMFLG,U
+
+	TFR	U,Y
+	SLEEP	HERE
+	TST	HSTDFLG
+	BNE	3$
+	SLEEP	LOOP
+
+3$	TFR	Y,U
+	LDA	NPLAYER		Test if this was a one or two player game
+	DECA			  and
+	BEQ	1$		  if one player then skip to page-display
+
+	LDA	#7
+	STA	PCRAM
+	LDA	#$B4		Initialize for Player Two
+	STA	SCOREAD
+	LDY	OHSMP2,U
+	JSR	HSTEST		Go test/install player 2 score
+	ORA	OHSMFLG,U
+	STA	OHSMFLG,U
+
+	TFR	U,Y
+	SLEEP	HERE
+	TST	HSTDFLG
+	BNE	1$
+	SLEEP	LOOP
+
+1$	TST	OHSMFLG,Y
+	BNE	2$
+
+10$	LDD	#(60.*4)	Sleep for 4 seconds to display GAME OVER
+	JSR	TIMER
+
+2$	CLR	NPLAYER
+	JMP	IAMODE
+
+
+*
+* Test For High Score to Date
+*   If a High Score is found, creates a task to get the initials and make
+*   the entry into the appropriate table
+*   On entry, Y points to the player's score
+*
+*   On exit, A is zero and HSTDFLG is non-zero if not high-score,
+*   opposite if high-score
+*
+
+HSTEST	PSHS	B,X,Y,U
+
+	CLR	HSTDFLG
+
+	LDX	#CMOSLSC	Pointer to CMOS Lowest Score
+	JSR	CMPSCR		Go see if this one is greater than CMOS lowest
+	BCS	1$		  and branch install if it is
+
+	LDX	#RAMLSC           else test this one with RAM lowest score
+	JSR	CMPSCR		  and
+	BCS	1$		  branch install if it is
+
+	CLRA			  else return a sliver of sleep time
+	COM	HSTDFLG
+	PULS	B,X,Y,U,PC	  and return without High Score installation
+
+*
+* OK, this is a high score
+*   Set up to get player's initials
+*   On entry, Y points to player's score
+*	      X points to low entry of table where score is to be installed
+
+1$	PSHS	X,Y		Save our pointers
+	NEW_SLEEP	TASK2,HSTDSLV,OHSTDMR  Make the task to get the entry
+	PULS	Y,U		Restore our pointers
+
+	STY	OHSTPTR,X	Table pointer
+	STU	OHSPSCR,X	Player's score
+
+	CLR	OHSCPS,X	Cursor positioned initialized
+
+	LDA	#CBLANK		Get a blank character
+	LDB	#2		Get a displacement of 2
+	LEAU	OHSINIT,X	Get the address for the 3 initials
+12$	STA	B,U		Store a blank here
+	DECB			  and
+	BPL	12$		  repeat for B = 2 to 0
+
+	LDA	#MAXBNC
+	STA	OHSBNC,X
+
+	LDD	#MAXETV		Maximum time to enter initials
+	STD	OHSETM,X	Save this max time in task workspace
+	COMA
+	PULS	B,X,Y,U,PC	  and return it to calling routine
+
+
+* This is the SLAVE task for High Score to Date
+*   Player-Initials entry routine and score installation task
+*
+
+HSTDSLV	PSHS	Y
+
+	JSR	PCLRSCR		Clear the screen
+
+	LDB	NPLAYER		Test if this game was one or two player
+	DECB			  and
+	BEQ	2$		  if one then skip
+	JSR	ANPLAY		  else go announce the current player
+
+2$	TEXT	$4F,$4F
+	PHRASE	BLUE,68,CONGRATULATIONS
+	TEXT	$50,$4E
+	PHRASE	YELLOW,68,CONGRATULATIONS
+	TEXT	$48,$49
+	PHRASE	WHITE,68,YOUR,SCORE,RANKS
+	TEXT	$40,$49
+	PHRASE	WHITE,68,AMONG,THE,TOP,30
+	TEXT	$38,$53
+	PHRASE	CREAM,68,GIVE,3,INITIALS
+	TEXT	$30,$34
+	PHRASE	CREAM,68,JOYSTICK,SELECTS,LETTER
+	TEXT	$28,$34
+	PHRASE	CREAM,68,FIRE,MAKES,LETTER,ENTRY
+
+
+	PULS	Y
+	LDB	#CBLANK+1	Save a blank for this current letter
+	STB	OHSCLT,Y
+
+	SLEEP	HERE		Now go to sleep for a bit
+
+	TFR	Y,U		Save Y register in U
+	LDX	OHSETM,U	Get our time-out counter and
+	LEAX	-1,X		  decrement and
+	LBEQ	HSTDINS		  when time's up, install what we've got
+	STX	OHSETM,U	  else save decremented value
+
+3$	LDB	#WHITE		Write the cursor at this location
+	JSR	WRCURS
+	JSR	WRCLT
+
+4$	TST	OHSBNC,U	Test if the bounce counter has counted down
+	BEQ	5$		  and if so then go feel for another input
+	DEC	OHSBNC,U	  else bounce down
+	BRA	10$		  and go back to sleep
+
+5$	JSR	APIA2		Go feel for input
+	ANDA	#FORWARD+REVERSE+ENTER1		Is it one of the ones we like?
+	BEQ	10$		Nah, so get outta here
+
+	CMPA	#ENTER1		Yes!  Was it perchance the Enter input?
+	BEQ	8$		Yes!  So let's enter the current character
+
+	LDB	#MAXBNC
+	STB	OHSBNC,U
+	LDB	OHSCLT,U	Get other char.  Get the current cursor pos
+	CMPA	#REVERSE	  and test if we want to go back
+	BEQ	6$		  yes
+
+	INCB			No, so go forward
+	CMPB	#MAXLET		Does this take us beyond the last letter?
+	BLS	7$		  no
+	LDB	#MINLET		  yes, so wrap-around to first character
+	BRA	7$
+
+6$	DECB			Go backward
+	BPL	7$
+	LDB	#MAXLET		  yes, so wrap-around to last character
+
+7$	STB	OHSCLT,U	Save this character as the current one
+	JSR	ERCLT
+	BRA	10$
+
+8$	LDB	#MAXBNC*4
+	STB	OHSBNC,U
+
+	CLRB			The current letter has been entered.  First, go
+	JSR	WRCURS		  erase the cursor
+
+	LDA	OHSCLT,U	Now, get this current letter
+
+	CMPA	#CRUB		Was it the Rubout character?
+	BNE	9$		Nah, so go install it
+	LDA	OHSCPS,U	Yes.  Is cursor displacement at left edge?
+	BEQ	10$
+	JSR	ERCLT
+	DECA
+	STA	OHSCPS,U
+	ADDA	#OHSINIT
+	LDB	A,U
+	STB	OHSCLT,U	
+	BRA	10$		  and restart project
+
+9$	LDB	OHSCPS,U	What?  Not Rubout?  Well, let's save character
+	ADDB	#OHSINIT	  into task workspace
+	STA	B,U
+
+	LDB	OHSCPS,U	Increment the cursor displacement
+	INCB			  until
+	STB	OHSCPS,U
+	CMPB	#3		  it reaches 3, at which point all initials
+	BEQ	HSTDINS
+
+10$	TFR	U,Y		Restore the Y register
+	SLEEP	LOOP		  and go sleepy-bye
+
+
+* Install this very entry
+HSTDINS	LDX	OHSTPTR,U	Get pointer to correct table
+	CMPX	#CMOSLSC	Is this table CMOS?
+	BNE	5$		Nope, so go do RAM only
+
+	JSR	HSTDTL		Yes, CMOS.  Get table pointer into Y
+
+	LDX	HSLEN1		Is first CMOS entry used?
+	BNE	1$		Yes, so branch to special test
+	STY	HSLEN1		  else No, so make this one the first entry
+	BRA	2$		  and skip to RAM test
+
+1$	STY	HSLEN2		Save this as second entry
+	CMPY	HSLEN1		Is this one below (higher) in table?
+	BHI	2$		If not above (lower) or same, skip
+	LEAX	SCRSIZ,X	  else bump other one
+	STX	HSLEN1		  down one entry
+
+2$	JSR	HSTDDT		Go move this entry in
+
+	LDX	#RAMLSC
+
+5$	JSR	HSTDTL		Go get pointer into RAM table
+
+	LDX	HSRLN1		Is first RAM entry already dirty?
+	BNE	3$		Yes, so branch to do extra stuff
+	STY	HSRLN1		  else No, so
+	BRA	4$		  store pointer here and split
+
+3$	STY	HSRLN2		Save this pointer
+	CMPY	HSRLN1		See above for below (higher)/above (lower)
+	BHI	4$		  decsription of what's being done here
+	LEAX	SCRSIZ,X
+	STX	HSRLN1
+
+4$	JSR	HSTDDT		Go install this entry into RAM
+
+	COM	HSTDFLG		Flip flag to designate task done
+	TFR	U,Y		Restore Y register and
+	JMP	DIE		  go die
+
+
+******************************************************************************
+* WRCURS
+*   Write cursor of color B at displacement OHSCPS
+*
+
+WRCURS	PSHS	D,X
+
+	LDX	#$1C77
+	JSR	MAKSCX
+	LDA	#CCURS
+	LDB	1,S
+	JSR	OUTCHR
+
+	PULS	D,X,PC
+
+******************************************************************************
+* WRCLT
+*   Write the current letter
+*
+
+WRCLT	PSHS	D,X,Y,U
+
+	LDX	#$1E77
+	JSR	MAKSCX
+	LDA	OHSCLT,U
+	LDB	#YELLOW
+	JSR	OUTCHR
+
+	PULS	D,X,Y,U,PC
+
+******************************************************************************
+* ERCLT
+
+ERCLT	PSHS	D,X
+
+	LDX	#$1E77
+	JSR	MAKSCX
+	STX	DDEST
+	LDX	#$0608!X$404
+	STX	DHIGH
+	CLR	DCONS
+	LDA	#$12
+	STA	DCTRL
+
+	PULS	D,X,PC
+
+
+******************************************************************************
+* CMPSCR
+*   Compares player score at Y with CMOS/RAM score at X,
+*   returns with carry set if Y-score >= X-score
+
+CMPSCR	PSHS	D,X,Y
+
+	LDB	#4
+
+1$	JSR	RCMOSA
+	CMPA	,Y+
+	BLO	2$
+	BHI	3$
+	DECB
+	BNE	1$
+
+2$	ORCC	#1
+	PULS	D,X,Y,PC
+
+3$	ANDCC	#$FE
+	PULS	D,X,Y,PC
+
+******************************************************************************
+* BLKMOV
+*   MOVE A BYTES FROM [X] TO [Y]
+
+BLKMOV	PSHS	D,X,Y
+
+1$	LDB	,X+
+	STB	,Y+
+	DECA
+	BNE	1$
+
+	PULS	D,X,Y,PC
+
+
+******************************************************************************
+* MAKSCX
+
+MAKSCX	PSHS	D
+
+	LDA	OHSCPS,U
+	LDB	#8
+	MUL
+	LEAX	B,X
+
+	PULS	D,PC
+
+
+******************************************************************************
+* HSTDTL
+*   High Score To Date Table Lookup
+HSTDTL	PSHS	X
+
+	LDY	OHSPSCR,U
+
+	LDA	#HSENTCT	Get number of entries per table
+	PSHS	A
+
+100$	DEC	,S		Decrement entry count
+	BEQ	101$		  and if 0, then this score is the table-topper
+
+	LEAX	-SCRSIZ,X	Get next higher entry in table
+	JSR	CMPSCR		Test this score against player's
+	BCS	100$		Loop while player score is >= score at X
+	LEAX	SCRSIZ,X
+
+101$	PSHS	X
+	LDX	3,S		Restore table bottom pointer
+	TFR	X,Y		Get copy of it in Y
+	LDA	#SCRSIZ		Get entry size
+
+102$	LEAX	-SCRSIZ,X	Bump X up [down] table
+	CMPX	,S
+	BLO	103$
+	JSR	BLKMOV		  else move this block from X to Y
+	LEAY	-SCRSIZ,Y	  and bump up [down] Y too
+	BRA	102$		  and do it again
+
+103$	LEAS	5,S
+	RTS
+
+
+******************************************************************************
+* HSTDDT
+HSTDDT	TFR	Y,X
+	LDY	OHSPSCR,U	Restore pointer to player's score
+
+	LDB	#4		CMOS-move 4 bytes
+
+104$	LDA	,Y+		Go
+	JSR	WCMOSA		  do
+	DECB			  it
+	BNE	104$		  to it
+
+	LDB	#3
+	LEAY	OHSINIT,U
+
+105$	LDA	,Y+
+	JSR	WCMOSA
+	DECB
+	BNE	105$
+
+	RTS
+
+
+	PULLORG	ROMSAVE
+
+
+
+

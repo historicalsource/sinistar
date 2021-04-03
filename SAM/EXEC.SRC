@@ -1,0 +1,130 @@
+	INCLUDE	START
+
+	PUSHORG	ROMSAVE
+
+	SUBTTL	EXECUTIVE LOOP
+
+* start object list
+EXEC	DEC	ESTATE		are we overloaded?
+	BLE	1$
+	JMP	VRLOAD		overload handling, use none
+1$	BPL	3$		should we start next object list?
+2$	LDX	[PRTASK]	get next task
+	LDY	[OTLINK,X]
+	JSR	[OEXEC,Y]	execute next task, uses A,B,X,Y,U
+	LDA	ESTATE		should we start next object list?
+	BMI	2$		yes:
+3$	JSR	EXECJNK		misc. exec junk, save none, uses A,B,X,U
+	LDY	SCRKEY		start list
+	BNE	EXEC2A		are there any objects?
+	BRA	EXEC		end of list.
+* enter here from display routine- list swapper
+EXEC1	LDX	OBLINK,Y	are we already at left of list?
+	BEQ	EXEC2
+	LDA	OLEFT,Y		are we above previous image?
+	CMPA	OLEFT,X
+	BHS	EXEC2
+	LDU	OFLINK,Y	swap back in new order, U-> next
+	STU	TEMP		save for end of swap(s)
+	STU	OFLINK,X	forward link-out
+	STX	OBLINK,U	backward link-out
+1$	LDX	OBLINK,X	X-> last backlink
+	CMPA	OLEFT,X		do we continue searching back?
+	BLO	1$		loop back if so
+	LDU	OFLINK,X	save last fwdlink
+	STY	OFLINK,X	forward link-in from last
+	STX	OBLINK,Y	back link-in to last
+	STU	OFLINK,Y	forward link-in to next
+	STY	OBLINK,U	back link-in from next
+	LDY	TEMP		swap done. pick up where we bottom off b4 swap.
+	BNE	EXEC2A
+	BRA	EXEC		end of list.
+* enter here if it went off screen
+EXEC2	LDY	OFLINK,Y	point to next object
+	BEQ	EXEC		end of list
+* come here if we have next (from swap) - collision scan
+EXEC2A	LDB	OLEFT,Y		compute my right
+	ADDB	ODWIDTH,Y
+	BCC	1$		right clipped?
+	LDB	#-1		yes
+1$	STB	RIGHT		save it
+	LDA	[OCHAR,Y]	do we care about collisions?
+	BMI	6$		yes:
+	LDX	OFLINK,Y	compare my right with next objects left.
+	CMPB	OLEFT,X
+	BLS	6$		end of check
+2$
+* * *	LDA	OTOP,X
+* * *	SUBA	[OIDESC,X]
+* * *	CMPA	OLPOS,X
+* * *	BLS	100$
+* * *	SWI
+* * *100$	LDA	OTOP,Y
+* * *	SUBA	[OIDESC,Y]
+* * *	CMPA	OLPOS,Y
+* * *	BLS	101$
+* * *	SWI
+* * *101$	LDA	OLEFT,X
+* * *	CMPA	OSPOS,X
+* * *	TST	OSTATUS,X
+* * *	BMI	102$
+* * *	BHS	102$
+* * *	SWI
+* * *102$	LDA	OLEFT,Y
+* * *	CMPA	OSPOS,Y
+* * *	TST	OSTATUS,Y
+* * *	BMI	103$
+* * *	BHS	103$
+* * *	SWI
+* * *103$
+	LDA	OTOP,Y		compare my top with his bottom
+	CMPA	OBOTTOM,X
+	BLE	5$
+	LDA	OBOTTOM,Y	compare my bottom with his top
+	CMPA	OTOP,X
+	BGE	5$
+	LDU	OCHAR,X		check collision mask
+	LDD	OMYTYPE,U
+	ANDA	[OCHAR,Y]
+	BNE	3$
+	STB	TEMP
+	LDD	[OCHAR,Y]
+	ANDB	TEMP
+	BEQ	4$
+3$	JSR	PIXCHK		yes, save X,Y, uses A,B
+4$	LDB	RIGHT		restore
+5$	LDX	OFLINK,X	collision check done, link to next.
+	CMPB	OLEFT,X
+	BHI	2$
+6$	LDA	ESTATE		beam avoidance,	do we care about tasks?
+	BGT	11$
+	LDA	RIGHT		collide with beam?
+	ADDA	#FUDGE
+	BCS	8$		right clip
+	CMPA	SCNLIN
+	BLO	11$		beam inside
+	STY	SAVEOBJ		execute task  while waiting for beam
+	LDX	[PRTASK]	get next task
+	LDY	[OTLINK,X]
+	JSR	[OEXEC,Y]	execute next task, uses A,B,X,Y,U
+7$	LDA	ESTATE		do we care about tasks?
+	BGT	10$
+	LDA	RIGHT		collide with beam?
+	ADDA	#FUDGE
+	BCS	9$		right clip
+	CMPA	SCNLIN
+	BLO	10$		beam inside
+	LDX	[PRTASK]	get next task
+	LDY	[OTLINK,X]
+	JSR	[OEXEC,Y]	execute next task, uses A,B,X,Y,U
+	BRA	7$		check again
+8$	STY	SAVEOBJ		right clip wait loop
+9$	LDX	[PRTASK]	get next task
+	LDY	[OTLINK,X]
+	JSR	[OEXEC,Y]	execute next task, uses A,B,X,Y,U
+	LDA	ESTATE
+	BLE	9$
+10$	LDY	SAVEOBJ
+11$	JMP	[ODRWVEC,Y]	erase/update/display, return to EXEC1 or EXEC2
+
+	PULLORG	ROMSAVE

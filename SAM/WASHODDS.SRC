@@ -1,0 +1,28 @@
+	PUSHORG	ROMSAVE
+	SUBTTL	WASHODDS	The odds for a warrior to fire are determined.
+*****
+*
+* WASHODDS
+*	The Warrior shooting odds are determined from the difficulty factor.
+*	As the warrior aggression increases from 0 to 127., the odds increase
+*	from 1 in 5 to 1 in 1.
+*
+* Needs:
+*	WAgg = An aggression rating increasing from 0 to 127
+*
+* Returns:
+*	CARRY CLEAR - Warrior may shoot this round.
+*	CARRY  SET  - Warrior may not shoot.
+*
+*****
+	ROUTINE	washodds
+	pshs	A,B		* Save work registers
+	RANDOM	OSEED1,160.	* Generate a random num from 0 to 159
+	pshs	A		*   and save it on stack
+	lda	WAgg		* Get the warrior aggression and
+	adda	#32.		*   add 32. to it (32/160 = 1/5, 160/160 = 1/1)
+	cmpa	S+		* Compare in with number on stack affection CC
+	puls	A,B		* Restore work registers
+	rts
+
+	PULLORG	ROMSAVE

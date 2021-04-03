@@ -1,0 +1,67 @@
+rich.equ	SET	*
+	NLIST
+	include	[sam]start
+	INCLVER	SAM,Sinistar.equ
+	INCLVER	RICH,Rich.sym
+*****
+*
+* NOT FOR RELEASE
+*
+*****
+CIRCATTACK	EQU	1	* Attack type for conditional assembly
+LOOPATTACK	EQU	2	* Attack type for conditional assembly
+ZOOMATTACK	EQU	3	* Attack type for conditional assembly
+ATTACK	EQU	CIRCATTACK
+
+	IFDEF	DIAGNOSE
+	PUSHORG	0
+	rmb	1		* 0 Invisible graph
+GMinutes	rmb	1	* 1 Play time in minutes
+GSeconds	rmb	1	* 2   and seconds.
+GAggression	rmb	1	* 3 Warrior aggression (high byte)
+GDeathTime	rmb	1	* 4 Time since Player death
+GDistance	rmb	0	* 5 Distance
+GANANG		rmb	1	* 5 Animation angle of squadron leader.
+GVelocity	rmb	0	* 6 Velocity
+GFLANG		rmb	1	* 6 Flight angle of squadron leader.
+	rmb	1		* 7 Special
+	rmb	1		* 8   Effects
+GMWaDrift	rmb	1	* 9 The # of Drifting warriors
+GMWaAttack	rmb	1	* A The # of Attacking warriors
+GMWaMine	rmb	1	* B The # of Mining warriors
+GMWaTail	rmb	1	* C The # of Guarding warriors
+GMWaInt		rmb	1	* D The # of Intercepting warriors
+		rmb	1	* E <SPECIAL EFFECT>
+		rmb	1	* F
+	IFLT	$10-*
+	ERR	Too Many Diagnostic Bars
+	ENDIF	0to15.
+	PULLORG
+	ENDIF	Diagnose
+***
+*	Offsets from TEMP
+***
+	PUSHORG	0
+	IFDEF	Diagnose
+TGMWaDrift	rmb	1	* The # of Drifting warriors
+TGMWaAttack	rmb	1	* The # of Attacking warriors
+TGMWaMine	rmb	1	* The # of Mining warriors
+TGMWaTail	rmb	1	* The # of Guarding warriors
+TGMWaInt	rmb	1	* The # of Intercepting warriors
+	ENDIF	Diagnose
+**OTopVel	rmb	2	* <VERSION11> Top velocity of craft (for CHASE)
+	PULLORG
+
+zAOrbit	EQU	5.		* Warrior attacks
+zDOrbit	EQU	1.		* Worker drifts
+zIOrbit	EQU	3.		* Inner
+zOOrbit	EQU	5.		* Outer
+zSOrbit	EQU	9.		* Workers with crystals circle Sinistar
+
+	LIST
+****
+*	<<< For V16 >>>
+****
+	SYMVER	OMWATAIL,6
+OMWaGuard	EQU	OMWaTail
+

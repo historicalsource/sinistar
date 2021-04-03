@@ -1,0 +1,28 @@
+	PUSHORG	ROMSAVE
+*****
+*
+* SCREENCHK
+*	Check to see if the object is on-screen
+*
+* Needs:
+*	Y -> scanner workspace of object
+*
+* Returns:
+*	CARRY CLEAR if ON SCREEN
+*	CARRY SET   if OFF SCREEN
+*
+*	This follows the CARRY SET on ERROR convention.
+*
+*****
+screenchk
+	pshs	D		* Save work registers
+	CLRD			* Check if the object is on the screen, as
+	cmpd	OSSCWSA,Y	*   indicated by the workspace pointer.
+	puls	D		* Restore work registers
+	beq	1$		* If on screen,
+	andcc	#!N(CARRY)	*   return with the carry bit clear.
+	rts
+1$	orcc	#CARRY		* Else, mark it off screen with the carry set.
+	rts
+
+	PULLORG	ROMSAVE

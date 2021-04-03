@@ -1,0 +1,89 @@
+	PUSHORG	ROMSAVE
+
+* routine for sinistar leaving sector
+	ROUTINE	LSSINI
+	jsr	Sinhibit	* Re-initialize Sinistar attack personality.
+	LEAS	2,S		never return to in-sector
+	LDD	OSLPOS,Y	transfer sector coordinates into supersector
+	PSHS	A
+	SEX
+	STD	SSSPOS
+	PULS	B
+	SEX
+	STD	SSLPOS
+	DEC	SINISEC		flag sinistar out of sector
+	JSR	DISPE		erase player message area
+	WAKE_HERE
+	LDB	OSLVEL,Y	add l and s velocity to supersector position
+	ADDB	SCLVEL
+	SEX
+	ADDD	SSLPOS
+	STD	SSLPOS
+	LDB	OSSVEL,Y
+	ADDB	SCSVEL
+	SEX
+	ADDD	SSSPOS
+	STD	SSSPOS
+	ADDD	#80		is it in sector?
+	TSTA
+	BNE	1$
+	LDD	SSLPOS
+	ADDD	#80
+	TSTA
+	BEQ	11$
+1$	LDX	SSSPOS		yes, push supersector coordinates on stack
+	LDD	SSLPOS
+	PSHS	D,X
+	BPL	2$		get absolute values of coords msbyte in A and B
+	NEGA
+2$	LDB	SSSPOS
+	BPL	3$
+	NEGB
+3$	LSR	S		divide coords on stack by 2 until A and B are 0
+	ROR	1,S
+	LSR	2,S
+	ROR	3,S
+	TSTA
+	BNE	4$
+	TSTB
+	BEQ	5$
+4$	LSRA
+	LSRB
+	BRA	3$
+5$	LDA	1,S		get scaled down coords off of stack
+	LDB	3,S
+	LEAS	4,S
+	JSR	RECTANG		convert to angle
+	ADDA	#20		project angle onto edge on sector
+	LDB	#80
+	ASLA
+	BCS	7$
+	ASLA
+	BCC	6$
+	COMA
+	ADDA	#80
+	DECB
+	BRA	10$
+6$	ADDA	#80
+	DECB
+	BRA	9$
+7$	ASLA
+	BCC	8$
+	ADDA	#80
+	BRA	10$
+8$	COMA
+	ADDA	#80
+9$	EXG	A,B
+10$	STD	OSLPOS,Y	save virtual sector edge position in scanner
+	SLEEP	LOOP
+*
+11$	CLR	SINISEC		flag sinistar in sector
+	pshs	Y		* Save message registers
+	DISPLAY	RED
+	PHRASE	RED,35,Sinistar,is,now
+	PHRASE	RED,35,in,scanner,range
+	puls	Y		* Restore message resgisters
+	jsr	taunt		* Let the Sinistar taunt the player
+	SLEEP	VSCAN		wake in normal scanner loop
+
+	PULLORG	ROMSAVE

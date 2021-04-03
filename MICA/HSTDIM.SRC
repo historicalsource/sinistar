@@ -1,0 +1,151 @@
+	INCLUDE	[SAM]START
+
+
+* On POWERUP, reset the RAM High Score Table
+	PUSHORG	ROMSAVE
+
+	VECTOR	POWVECT
+
+	LDX	#RAMHSC		Address of RAM table
+	LDD	#$0001		Use 0001 for initialization base
+	JMP	HSTDIM		Go set table (returns through HSTDIM)
+
+
+* On RESET HIGH SCORE Request
+	ROUTINE	RSHS
+
+	LDX	#CMOSHSC	Address of CMOS High Score table
+	LDD	#$0003		Use 30,000 as base value
+	JSR	HSTDIM		Do it
+	LDX	#RAMHSC		Address of RAM High Score table
+	LDD	#$0001		Use 10,000 as base value
+	JSR	HSTDIM		Do it
+
+	CLR	$CA01		Clear the screen
+	JSR	CLRSCR
+
+	TEXT	$4F,$30
+	PHRASE	WHITE,68,HIGH,SCORE,TABLE,RESET
+
+	LDA	#$7F		Sleep for 7f
+	JSR	NAPV
+
+	RTS
+
+
+*******************************************************************************
+* HSTDIM
+*   Routine sets up HSENTCT values starting at X, uses D as base value
+
+HSTDIM	PSHS	D,X,Y,U
+
+	LDU	#$9045		Starting addition to base value
+
+	LDX	#CMOSSD		Load saved random seed
+	JSR	RCMOSA		  from CMOS
+	INCA			Bump to next
+	ANDA	#3		Keep the value from 0 to 3
+	LEAX	-2,X		Restore pointer to CMOSSD
+	JSR	WCMOSA		Write the new value
+	ASLA			Turn into word index
+	LDY	#HSISWE		Get address of starting addresses table
+	LDY	A,Y		Get this starting address
+
+	LDX	2,S		Restore starting location passed in X
+
+	LDB	#HSENTCT	Number of entries
+	PSHS	B
+
+1$	LDD	1,S		Restore base value
+	JSR	WCMOSD		Stuff it at X
+
+	TFR	U,D		Get addition
+	JSR	WCMOSD		Stuff it at X
+	EXG	A,B		Add the shuffle value
+	ADDA	#$35		  to the low order digits
+	DAA
+	EXG	A,B
+	ADDA	#$97		  and then decrease the two high digits
+	DAA			  by three
+	TFR	D,U		Save the additive value
+
+	LDB	#3		3 initials per pass
+
+4$	LDA	,Y+		Get next initial
+	JSR	WCMOSA		Stuff it at X
+	DECB			Another initial for this entry?
+	BNE	4$		  Branch if so
+
+	CMPY	#HSISUS+(3*HSENTCT) Are we at the end of the table?
+	BNE	207$		Branch if not
+	LDY	#HSISUS		  else start from beginning of table
+
+207$	DEC	,S		Decrement the number of entries made
+	BNE	1$		  and loop until all have been done
+
+	LEAS	1,S		Restore stack
+
+	JSR	CLRHSLE		Clear High Score Last Entered pointers
+
+	PULS	D,X,Y,U,PC	Bye for now
+
+
+*******************************************************************************
+* CLRHSLE
+*   Clear the High Score Last Entered pointers
+CLRHSLE	CLRD
+	STD	HSLEN1
+	STD	HSLEN2
+	STD	HSRLN1
+	STD	HSRLN2
+	RTS
+
+
+* Pointers to initial initials 
+HSISWE	FDB	HSISSD,HSISNF,HSISBM,HSISRW
+
+
+* Table of initials, including everyone in the software department plus
+*   many other people who were key to the successful completion of Sinistar!
+* NB: This table must have at least as many entries as the maximum number
+*     of entries in either the RAM or CMOS tables (currently 30  18 March 1983)
+HSISUS	FCB	17.,25.,14.	GOD	Because He Is
+	FCB	21.,11.,35.	KAY	Kay Anderson
+	FCB	18.,15.,13.	HEC	Harry Cline
+HSISSD	FCB	29.,11.,23.	SAM	Sam Dicker
+	FCB	21.,32.,14.	KVD	Kristina Donofrio
+HSISNF	FCB	24.,39.,16.	N-F	Noah Falstein
+	FCB	21.,20.,16.	KJF	Ken Fedesna
+	FCB	21.,11.,17.	KAG	Ken Graham
+	FCB	16.,28.,17.	FRG	Rich Grande
+	FCB	35.,11.,21.	YAK	Jack Haeger
+	FCB	20.,20.,21.	JJK	John Kotlarik
+	FCB	21.,16.,22.	KFL	Ken Lantz
+	FCB	26.,20.,23.	PJM	Pierre Maloka
+	FCB	14.,25.,13.	DOC	Keith McMillen
+	FCB	20.,22.,23.	JLM	John Meissen
+	FCB	15.,39.,36.	E-Z	Mike Metz
+HSISBM	FCB	38.,23.,38.	=M=	Robert J. Mical
+	FCB	30.,19.,23.	TIM	Tim Murphy
+	FCB	20.,28.,24.	JRN	John Newcomer
+	FCB	30.,25.,23.	TOM	Tom O'Meara
+	FCB	26.,16.,36.	PFZ	Bill Pfutzengesundheit
+	FCB	28.,30.,26.	RTP	Rudy Plemich
+	FCB	12.,16.,14.	BFD	Dave Rzepka
+	FCB	23.,12.,29.	MBS	Marc Stanis
+	FCB	23.,28.,29.	MRS	Mike Stroll
+	FCB	15.,20.,29.	EJS	Ed Suchocki
+	FCB	29.,30.,31.	STU	Stewart West
+HSISRW	FCB	33.,19.,30.	WIT	Rich Witt
+	FCB	23.,25.,23.	MOM	Because She Is
+	FCB	16.,11.,13.	FAC	Future Absurdity Commission
+
+	FCC	'ROBERT J. MICAL'	Hey, who's that guy?
+
+	PULLORG	ROMSAVE
+
+
+
+	
+	
+	

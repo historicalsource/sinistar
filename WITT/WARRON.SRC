@@ -1,0 +1,52 @@
+	include	start
+	INCLVER	SAM,Sinistar.equ
+	PUSHORG	ROMSAVE
+
+	PUSHORG	CWarrior+OOnScr
+	fdb	WarrOn		* Warrior on screen routine
+	PULLORG
+
+*****
+*
+* WARRON
+*	Warrior On-Screen routine.  This routine is invoked when the warrior
+*	first comes on screen and is used to prepare the initial animation.
+*
+* Needs:
+*	X -> warrior object (screen) workspace
+*	Y -> warrior scanner workspace
+*	U -> warrior characteristics descriptor
+*
+* Returns:
+*	OSANANG,Y - The current animation angle set for onscreen animation.
+*
+*****
+	ROUTINE	WarrOn
+	pshs	A,B,X,Y		* Save work registers
+	ldb	OSMIS,Y		* The warrior's mission
+	andb	#%11111110	*   (only even number missions allowed
+	blt	2$		*    and neither may a mission go
+	cmpb	#OMWaSave	*    beyond the known mission id's
+	bge	2$		*    either is corrected in case of error.)
+1$	ldx	#3$		*   is used to determine how to aim the
+	jmp	[B,X]		*   warrior when first appearing on screen.
+
+2$	ldb	#OMWaDrift	* Default in case of system error to drifting
+	bra	1$
+
+3$	fdb	4$		* Drift
+	fdb	5$		* Attack
+	fdb	5$		* Mine
+	fdb	5$		* Guard
+	fdb	5$		* Intercept
+
+4$	ldx	#SPLAYER	* X -> psuedo object (screen) player workspace
+	bra	10$
+5$	ldx	[OSCWCR,Y]	* X -> object (screen) workspace of caller
+10$	jsr	updflang	* Set the angle of flight
+	lda	OSFLANG,Y	*   and use it
+	sta	OSANANG,Y	*   as the animation angle.
+	puls	A,B,X,Y		* Restore work registers
+	jmp	VScrOn		* Perform the remaining screen on jobs.
+
+	PULLORG	ROMSAVE

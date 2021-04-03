@@ -1,0 +1,22 @@
+
+* color palette
+	RADIX	8
+*		bgr	#    intensity	color
+PALETTE	FCB	000	0	  0	black
+	FCB	377	1	100	white
+	FCB	277	2	 92	cream
+	FCB	256	3	 76	salmon pink*
+	FCB	255	4	 70	tan grey
+	FCB	244	5	 60	grey
+	FCB	232	6	 46	blue-grey
+	FCB	000	7	  ?	special effect
+	FCB	000	8	  ?	special effect
+	FCB	311	9	 53	blue-intense
+	FCB	120	A	 24	dark grey
+	FCB	113	B	 32	dark purple
+	FCB	005	C	 43	burgundy
+	FCB	007	D	 60	red
+	FCB	000	E	  ?	special effect
+	FCB	067	F	 80	yellow
+	RADIX	16
+

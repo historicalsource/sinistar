@@ -1,0 +1,13 @@
+	INCLUDE	START
+	INCLVER	SAM,SINISTAR.EQU
+FIXPLUNIT
+
+* initialize player unit vector
+	PUSHORG	ROMSAVE
+	VECTOR	INIVECT
+* * *
+	LDD	#007E		initialize player unit vector
+	STD	PLSUNIT
+* * *
+	RTS
+	PULLORG	ROMSAVE

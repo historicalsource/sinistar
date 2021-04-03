@@ -1,0 +1,38 @@
+The following duplicate entries exist in the V13 library.
+If your name exists to the right of these, please advise me which is correct.
+I intend to update my files with:
+	IFE	VERSION-14.
+	ERR	!Fix such and such a problem ... to be sure V14 isn't bad too.
+	ENDIF	VERSION-14.
+At least if I forget the problem by the time we re-release, it'll get flagged!
+	Thanks ... rich
+
+
+Duplicate: "DTIMER	EQU	$7B50    "	Noah
+           "DTIMER	EQU	$9FF6    "
+Duplicate: "INCALL	EQU	$7754    "	Noah
+           "INCALL	EQU	$5960    "
+Duplicate: "INWARR	EQU	$5963    "	Noah
+           "INWARR	EQU	$7709    "
+Duplicate: "IRPLAY	EQU	$76BA    "	Noah
+           "IRPLAY	EQU	$594A    "
+
+Duplicate: "OPEN  	EQU	$0004    "	Rich
+           "OPEN  	EQU	$EB7F    "	Fixed
+
+Duplicate: "SETA  	EQU	$4CD1    "	Noah
+           "SETA  	EQU	$8C78    "
+Duplicate: "SEXPOB	EQU	$74B0    "	Noah
+           "SEXPOB	EQU	$4275    "
+Duplicate: "SLAM  	EQU	$E86C    "	Sam
+           "SLAM  	EQU	$E192    "
+Duplicate: "TAUNT 	EQU	$7B03    "	Noah
+           "TAUNT 	EQU	$6171    "
+
+Duplicate: "UPDFLA	EQU	$82AF    "	Rich
+           "UPDFLA	EQU	$6567    "	Bad Lib!
+Sam:	^^ The library must be bad.  There is no UPDFLA at $82AF !!
+
+Duplicate: "WITT1 	EQU	$58D5    "	Rich
+           "WITT1 	EQU	$3714    "	Fixed
+

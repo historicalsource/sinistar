@@ -1,0 +1,2 @@
+$ DISP "SEARCHING FOR ''P2'"
+$ SEA 'P1' "''P2''"

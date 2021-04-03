@@ -1,0 +1,20 @@
+	INCLVER	RICH,table			* ORG Macro
+
+	PUSHORG	ROMSAVE
+***
+*	Warrior guarding in orbit. (TASKLIST 8/16)
+***
+	TABLE	stblguard
+	fdb	($7FFF),($1FFF),asrd3
+	fdb	(0100.),($0800),asrd4
+	fdb	(0048.),($01C0),asrd3
+	fdb	(0040.),($0170),asrd3
+	fdb	(0032.),($0148),asrd3
+	fdb	(0024.),($00F8),asrd2
+	fdb	(0016.),($0080),asrd2
+	fdb	(0008.),($0030),asrd1
+	fdb	(0004.),($0000),asrd1
+	fdb	(0000.),($0000),asrd0
+	ENDTBL
+
+	PULLORG	ROMSAVE

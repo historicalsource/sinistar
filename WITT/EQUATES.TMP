@@ -1,0 +1,28 @@
+$ P_DEFAULT := RICHS
+$ IF P1.NES."" THEN P_DEFAULT := 'P1'
+$ P1 := 'P_DEFAULT'.LIS
+$ P2 := 'P_DEFAULT'.EQU
+$ DISP "
+Reading from ''P1' and writing to ''P2'"
+$ DISP "Please type a Control-A and wait for the command level prompt."
+$ DISP " "
+$ ASSIGN/USER SYS$COMMAND SYS$INPUT
+$ EDIT/EDT/COMMAND=EDT$DIR:EQUATE.EDT/OUTPUT='P2' 'P1'
+$ @[witt.com]COPY 'P2' 'P2'
+$!
+$ open/write output 'P2'
+$ ON CONT_Y THEN GOTO _ERROR
+$ A := assign/user output sys$output
+$ A
+$ WRITE SYS$OUTPUT "	NLIST"
+$ A
+$ WRITE SYS$OUTPUT "''P2'"
+$ A
+$ SEARCH/NOHEAD/MATCH=NOR 'P2';-1 SSTART,SINIST
+$_ERROR:
+$ A
+$ WRITE SYS$OUTPUT "	LIST"
+$ close output
+$ deassign sys$output
+$ PURGE 'P2'
+$ WRITE SYS$OUTPUT "Please change all the $SYMBOLS to _SYMBOLS now!"

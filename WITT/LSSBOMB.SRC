@@ -1,0 +1,52 @@
+	INCLVER	RICH,display		* Message display macros
+
+	PUSHORG	ROMSAVE
+*****
+*
+* LSSBOMB
+*	Leaving Sector routine for a Sinibomb.
+*	This automatically intercepts the sinistar and destroys a
+*	piece of it when the Sinistar is out of the sector too.
+*	Otherwise, leaving the sector causes interception by a worker
+*	or warrior or something else (when the sinistar hasn't left the sector)
+*
+* Needs:
+*	Y -> scanner workspace of sinibomb leaving the sector
+*	U -> characteristics descriptor of sinibomb leaving the sector
+*	SiniSector - NON-ZERO when the sinistar is out of sector.
+*		     ZERO when the sinistar is within the sector.
+*
+* Returns:
+*	Nothing
+*
+*****
+	PUSHORG	CSbomb+OLSVec
+	fdb	LSSBomb
+	PULLORG
+
+	ROUTINE	LSSBomb
+	pshs	A,B,X,Y		* Save work registers
+	tst	SiniSector	* If the Sinistar is not in sector
+	bne	1$		*   then intercept the bomb.
+	ldx	PiecePtr	* If the Sinistar has
+	cmpx	#PieceTbl	*   at least one piece
+	bne	99$		*   then it can be tracked.  Else, die ...
+**
+*	Too bad for the Sinibomb!  It got intercepted by the psuedo-wall
+*	of workers and warriors around the edge of the sector.
+**
+1$	leax	Y		* X -> sinibomb scanner workspace
+	jsr	[OKiVec,U]	* Kill sinibomb
+	RANDOM	OSEED1,BYTE	* Randomly report
+	tsta			*   the status of
+	bmi	99$		*   sinibombs that leave sector.
+	DISPLAY	YELLOW
+	PHRASE	YELLOW,35,SINIBOMB
+	PHRASE	YELLOW,35,INTERCEPTED
+
+99$	puls	A,B,X,Y		* Restore work registers
+	rts
+
+	PULLORG	ROMSAVE
+
+	INCLVER	RICH,subpart		* Kill a part of the sinistar

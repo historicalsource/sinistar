@@ -1,0 +1,22 @@
+*
+	INCLVER	RICH,symrich		* Rich's symbols
+	INCLVER	RICH,ramrich		* Ram variables
+	INCLVER	RICH,inirich		* VECTOR INIVECTs
+*
+	INCLVER	RICH,disp		* Message display routines
+	INCLVER	RICH,display		* Message display macros
+*
+* * *	INCLVER	RICH,button		* Control panel routines
+	INCLVER	RICH,collision		* Collision effects
+	INCLVER	RICH,copyright		* EBCDIC copyright
+	INCLVER	RICH,difficult		* Difficulty factor tables
+	INCLVER	RICH,krsini		* Sinistar Killing routine
+	INCLVER	RICH,leavesec		* Leaving sector vectors
+	INCLVER	RICH,tables
+	INCLVER	RICH,worker
+	INCLVER	RICH,warrior
+	INCLVER	RICH,sinibomb
+	INCLVER	RICH,sini
+*
+	INCLVER	RICH,stubs		* To fake Noah's stuff.
+*

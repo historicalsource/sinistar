@@ -1,0 +1,139 @@
+	include	[sam]start
+	INCLVER	SAM,SInistar.equ
+
+	PUSHORG	ROMSAVE
+*****
+*
+* DELTAU
+*
+* Needs:
+*	D =  desired velocity change of the craft
+*	U =  current velocity of the craft
+*
+* Returns:
+*	D = allowed change in velocity of the craft
+*
+*****
+DELTAV	SET	$0080
+
+	ROUTINE	DeltaU
+	jsr	200$		* If D is to large,
+	bcs	1$		*   then compute the maximum velocity.
+	rts			* Else, use it since it's small enough.
+***
+*	For velocity changes very great where the current velocity is very low
+***
+1$	jsr	220$		* If U is too large,
+	bcs	9$		*   then compute the maximum velocity.
+*
+2$	tsta			* If D was originally postive,
+	bpl	3$		*   then return a positive limit.
+	ldd	#-DELTAV	* Else, return a negative limit.
+	rts
+*
+3$	ldd	#DELTAV		* Limit the amount of change from very large
+	rts			*   to this for small current velocities (U).
+***
+*	For relatively (to $0100) large changes against relatively large
+*	current velocity, the maximum change that may occur is the current
+*	velocity.
+***
+9$	pshs	D,U
+	addd	2,S		* Let U = the new (requested) velocity.
+	exg	D,U		*   and save the maximum
+	RPT	1,asra,rorb	*   allowed
+	addd	2,S		*   velocity
+	pshs	D		*   on the stack.
+	tst	,S
+	blt	88$
+*	Is 0 <= newvel <= (positive)maxvel?	
+	cmpu	#0		* If the change is too negative,
+	blt	10$		*   then limit the amount of change.
+	cmpu	0,S		* If the resulting velocity
+	ble	20$		*   is not in the range between
+10$	ldd	4,S		*   zero and the maximum allowed velocity,
+***
+*	The max velocity must have the same sign as the original change.
+***
+	bpl	11$
+*	U was neg. Was D?
+	tst	2,S		* The limiting value is negative.  It must
+	bpl	12$		*   be made postive for a positive orig. delta
+	bra	13$		*   or left negative for an orig. neg. delta.
+*	
+11$	tst	2,S		* The limiting value is positive.  It must
+	bpl	13$		*   be left the same sign as the original
+12$	NEGD			*   delta or changed to match it.
+13$	std	2,S		*   then set limit the maximum velocity.
+20$	leas	2,S		* Clear the stack.
+	puls	D,U		* Return the new change amount.
+	rts
+*	Is (negative)maxvel <= newvel <= 0?
+88$	cmpu	#0		* If the change is too positive,
+	bgt	10$		*   then limit the amount of change.
+	cmpu	0,S		* If the resulting velocity
+	blt	10$		*   is not in range, limit the change.
+	bra	20$		* Else, keep the current values.
+
+*****
+*
+* 200$ (RANGE_CHECK D)
+*
+* Needs:
+*	D = value to check in range
+*
+* Returns:
+*	CARRY CLEAR - if within range (-DELTAV <= D <= 0) or (0 <= D <= DELTAV)
+*	CARRY  SET  - if not in range
+*
+*****
+200$	tsta
+	bmi	201$
+**
+*	Is 0 <= D <= +DELTAV ?
+**
+	cmpd	#DELTAV		* If the change amount is positive
+	ble	203$		*   and less than DELTAV then use it.
+	bra	202$
+**
+*	Is -DELTAV <= D <= 0 ?
+**
+201$	cmpd	#-DELTAV	* If the change amount is negative
+	bge	203$		*   and greater than -DELTAV then use it.
+202$	orcc	#CARRY		* Set carry since not in range.
+	rts
+203$	andcc	#!N(CARRY)	* Clear carry since within range.
+	rts
+*****
+*
+* 220$ (RANGE_CHECK U)
+*
+* Needs:
+*	U = value to check in range
+*
+* Returns:
+*	CARRY CLEAR - if within range (-DELTAV <= U <= 0) or (0 <= U <= DELTAV)
+*	CARRY  SET  - if not in range
+*
+*****
+220$	exg	D,U
+	tsta
+	exg	D,U
+	bmi	221$
+**
+*	Is 0 <= U <= +(DELTAV*2) ?
+**
+	cmpu	#(DELTAV*2)	* If the change amount is positive
+	ble	223$		*   and less than DELTAV then use it.
+	bra	222$
+**
+*	Is -(DELTAV*2) <= U <= 0 ?
+**
+221$	cmpu	#-(DELTAV*2)	* If the change amount is negative
+	bge	223$		*   and greater than -DELTAV then use it.
+222$	orcc	#CARRY		* Set carry since not in range.
+	rts
+223$	andcc	#!N(CARRY)	* Clear carry since within range.
+	rts
+
+	PULLORG	ROMSAVE

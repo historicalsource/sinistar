@@ -1,0 +1,13 @@
+*****
+*
+* SYMCHK Arg1
+*	If Arg1 is not defined, then a request is made for that symbol
+*	so that a later @SYMVER will bring in that symbol.
+*
+*****
+SYMCHK	MACRO	A1
+	IFNDEF	A1
+	ORG	A1
+A1
+	ENDIF
+	ENDM

@@ -1,0 +1,17 @@
+	IFE	Version-17.
+fixinirich
+	PUSHORG	$5282
+	lda	#%00111011	* To check Sinibomb button during demo.
+	PULLORG
+*
+	PUSHORG	$5286
+	ldd	#(60.*60.)	* 60 seconds not 45 for the max demo length.
+	PULLORG
+*
+	PUSHORG	ROMSAVE
+	VECTOR	PowVect
+	clr	WECheck		* To reset court check.
+	rts
+	PULLORG	ROMSAVE
+*
+	ENDIF	Version-17.

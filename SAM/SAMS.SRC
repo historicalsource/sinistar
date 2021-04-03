@@ -1,0 +1,34 @@
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+*									      *
+*									      *
+*	 SSSS   AAA   M   M  ''   SSSS                V   V   11  77777       *
+*	S      A   A  MM MM  ''  S                    V   V  1 1      7       *
+*	 SSS   AAAAA  M M M   '   SSS                 V   V    1     7        *
+*	    S  A   A  M   M          S                 V V     1    7         *
+*	SSSS   A   A  M   M      SSSS                   V    11111  7         *
+*									      *
+*	    S	  I	N     I	    S	  T	A     R		  17	      *
+*									      *
+*	 A game by Sam Dicker, Noah Falstein, Bob Mical and Richard Witt      *
+*		 Copyright (c) 1983 by Williams Electronics Inc.	      *
+*									      *
+* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+SINISTA	SET	*
+DISPLAY	SET	*
+* * *	INCLUDE	[SAM]START
+* * *	INCLUDE	[SAM]TSTART
+	INCLUDE	START
+* * *
+
+	NLIST
+
+LEVEL	SET	0
+
+	INCLVER	SAM,SAMS.SYM
+	INCLVER	SAM,SAMS.SET
+	LIST
+
+	INCLVER	SAM,S2
+
+	ENDTEST
+	END

@@ -1,0 +1,336 @@
+	INCLUDE	START
+
+	PUSHORG	ROMSAVE	
+
+	SUBTTL	EXECUTIVE ROUTINES
+
+* miscellaneous exec stuff
+	ROUTINE	EXECJNK
+	LDU	TLEVEL		save current task pointer > uses A,B,X,U
+	LDD	PRTASK
+	STD	OTPTR,U
+	INC	TCLOCK		increment task clock
+	BEQ	4$		find this ticks task list
+	LDX	#TASK1
+	LDB	#OTLEN
+	LDA	TCLOCK
+1$	ABX
+	LSRA
+ 	BCC	1$
+	LDA	OTBACK,X	increment this ticks task backlog counter
+	INCA
+	BNE	2$		* * *TEMPORARY
+	SWI			* * *TRAP
+2$	STA	OTBACK,X
+	CMPA	OTBACK,U	point U to most backlogged task
+	BLO	4$
+	BNE	3$		equally backlogged?
+	CMPX	TLEVEL		yes, use shortest time task list
+	BHS	4$
+3$	LEAU	X
+4$	LDA	OTBACK+TASK1	increment task 1 backlog counter
+	INCA
+	BNE	5$		* * *TEMPORARY
+	SWI			* * *TRAP
+5$	STA	OTBACK+TASK1
+	CMPA	OTBACK,U	point U to most backlogged task
+	BLO	6$
+	LDU	#TASK1
+6$	STU	TLEVEL		set current level to most backlogged task
+	LDD	OTPTR,U		set next task pointer to most backlogged task
+	STD	PRTASK
+	JSR	TRASCOM		trash compact storage  save none, uses A,B,X,U
+	LOCAL
+	LDA	TNTIME		tune playing?
+	BEQ	1$		
+	DEC	TNTIME		yes, decrement tune timer, next instruction?
+	BNE	1$
+	LDU	TNPC		yes,  save none, uses A,B,X,U
+	JSR	TNLOAD
+1$	RANDOM	OSEED1,WORD	randomize OSEED1
+	RANDOM	OSEED2,BYTE	randomize OSEED2
+	ANDA	#06		random crystal animation routine
+	LDX	#CRYTBL
+	LDD	A,X
+	STD	CRYANI
+	LOCAL
+	JSR	SPANEL		scan control panel, uses A,B,X,Y,U, save none
+	LDA	NPLAYER		attract mode?
+	BNE	5$
+	RTS			yes?, stop here
+*
+5$	CLR	PLACCEL		zero player acceleration
+	LDD	#2222		draw player scanner image
+	STD	8180
+	LOCAL
+	LDA	PMEMCTL		write inhibit off
+	PSHS	A
+	ANDA	#!N4
+	STA	PMEMCTL
+	STA	MEMCTL
+	LDD	#70E!X404	draw scanner screen border: * * * FOR DMA ERROR
+	STD	DHIGH
+	LDD	#ISBORD
+	STD	DSOUR
+	LDD	SBORD		has border moved?
+	CMPD	PSBORD
+	BEQ	2$
+	STD	TEMP		yes, save new position
+	LDD	PSBORD		erase old scanner screen border
+	ADDA	#3
+	RORA
+	STD	DDEST
+	LDA	#DWBL+DZSP+DCNS
+	BCC	1$
+	ORA	#DTFL
+1$	STA	DCTRL
+	LDD	TEMP		save new border
+	STD	PSBORD
+2$	ADDA	#3		draw scanner border
+	RORA
+	STD	DDEST
+	LDA	#DWBL+DZSP+DCNS
+	BCC	3$
+	ORA	#DTFL
+3$	LDB	ZONECOL		get zone color
+	STB	DCONS
+	STA	DCTRL
+	PULS	A		write inhibit on
+	STA	PMEMCTL
+	STA	MEMCTL
+	CLR	DCONS		zero dma constant for erase
+	HOOK	EXEVECT
+	LDY	#WPLAYER	get player object wsa in Y
+	LDA	PANMASK		player joystick on?
+	BITA	#4
+	LBEQ	SCROLL
+	LOCAL
+	LDX	#JOYSWI		yes, joystick routine:  get joystick conv table
+	LDA	PIA+4		read joystick pia
+	ANDA	#070		s position only
+	RPT	4,LSRA		convert to direction and magnitude
+	LDB	A,X
+	ASLB			shift magnitude for rectangular to polar convs
+	ASLB
+	STB	TEMP		save s direction and magnitude
+	LDA	PIA+4		read joystick pia
+	ANDA	#07		l position only
+	LDB	A,X		convert to direction and magnitude
+	ORB	TEMP		add in s magnitude for rect to polar conversion
+	LBEQ	SCROLL		zero magnitude?, skip accelerate and rotate
+	LDX	#JOYRTP		get r-p conversion table
+	LDD	B,X		get radius and angle
+	STA	PLACCEL		save radius
+	LDA	PIA+4		convert angle to four quadrants
+	BMI	1$		
+	NEGB
+1$	BITA	#8
+	BNE	2$
+	NEGB
+	ADDB	#80
+2$	SUBB	PLYRANG		rotate player: find angle from joystick to ship
+	LDA	PLACCEL		get joystick radius
+	STB	TEMP		save difference angle
+	MUL			multiply joystick radius by difference angle
+	BPL	3$
+	SUBA	PLACCEL
+3$	ADDD	#80		round off correctly
+	TFR	A,B		get product into B
+	ADDA	PLYRANG		rotate ship
+	STA	PLYRANG		save new rotation angle
+	JSR	SINCOS		compute players unit vector
+	STD	PLSUNIT		save players unit vector
+	LDB	TEMP		check angle from joystick to player ship
+	ADDB	#20
+	CMPB	#40
+	BHS	SCROLL		to great?, skip acceleration
+	LDB	PLLUNIT		accelerate player:  get l unit vector
+	SEX			get l component of unit vector
+	RPT	2,ASLB,ROLA	scale l component for maximum velocity
+	SUBD	OLVEL,Y		compute difference from players l velocity
+	STA	TEMP		multiply by joystick radius
+	LDA	PLACCEL
+	MUL
+	STA	TEMP+2
+	LDA	PLACCEL
+	LDB	TEMP
+	MUL
+	BPL	6$
+	SUBA	PLACCEL
+6$	ADDB	TEMP+2
+	ADCA	#0
+	RPT	3,ASRA,RORB	scale down l acceleration
+	ADCB	#0		round off l acceleration
+	ADCA	#0
+	ADDD	OLVEL,Y		add to player l velocity
+	STD	OLVEL,Y		save new player l velocity
+	LDB	PLSUNIT		get s component of unit vector
+	SEX
+	RPT	3,ASLB,ROLA	scale s component for maximum velocity
+	SUBD	OSVEL,Y		compute difference from players s velocity
+	STA	TEMP		multiply by joystick radius
+	LDA	PLACCEL
+	MUL
+	STA	TEMP+2
+	LDA	PLACCEL
+	LDB	TEMP
+	MUL
+	BPL	5$
+	SUBA	PLACCEL
+5$	ADDB	TEMP+2
+	ADCA	#0
+	RPT	3,ASRA,RORB	scale down s acceleration
+	ADCB	#0		round off s acceleration
+	ADCA	#0
+	ADDD	OSVEL,Y		add to player s velocity
+	STD	OSVEL,Y		save new player s velocity
+SCROLL	LDA	PANMASK		scrolling and stars on?
+	BITA	#8
+	BNE	1$
+	RTS			no?, that's all folks
+*
+1$	LDA	OLPOS,Y		hard scrolling:
+	LDB	OLPOS+1,Y	compute next player l screen position
+	ADDD	OLVEL,Y
+	ADDD	SLVEL
+	CMPA	#BHSCROL	check bottom limit
+	BLO	2$
+	CMPA	#THSCROL	check top limit
+	BLO	3$
+2$	LDD	OLVEL,Y		hard scroll l axis
+	NEGD
+	STD	SLVEL
+3$	LDD	OSVEL,Y		compute next player s screen position
+	ADDD	SSVEL
+	ADDD	OSPOS,Y
+	CMPA	#LHSCROL	check left limit
+	BLO	4$
+	CMPA	#RHSCROL	check right limit
+	BLO	5$
+4$	LDD	OSVEL,Y		hard scroll s axis
+	NEGD
+	STD	SSVEL
+5$	EQU	*
+	LOCAL
+	LDD	PLSUNIT		soft scrolling: get player ship unit vector
+	RPT	3,ASRA		scale down to add to players position
+	RPT	3,ASRB
+	STD	TEMP		save players angle vector
+	LDB	#7B		compute player s axis distance from center
+	SUBB	OSPOS,Y
+	ASRB			convert it to bytes
+	SUBB	TEMP		add s component of players angle
+	SEX			scale down
+	RPT	3,ASLB,ROLA
+	SUBD	OSVEL,Y		add to players screen s velocity for damping
+	SUBD	SSVEL
+	RPT	5,ASRA,RORB	adjust s axis scrolling velocity
+	PSHS	D
+	ASRA
+	RORB
+	ADDD	S++
+	ADDD	SSVEL
+	STD	SSVEL
+	LDB	#38		compute player l axis distance from center
+	SUBB	OLPOS,Y
+	SUBB	TEMP+1		add l component of players angle
+	SEX			scale down
+	RPT	3,ASLB,ROLA
+	SUBD	OLVEL,Y		add to players screen l velocity for damping
+	SUBD	SLVEL
+	RPT	5,ASRA,RORB	adjust l axis scrolling velocity
+	PSHS	D
+	ASRA
+	RORB
+	ADDD	S++
+	ADDD	SLVEL
+	STD	SLVEL
+	LOCAL
+	LDD	SLVEL		add l axis screen velocity to position
+	BPL	1$
+	ADDD	SLPOS+1
+	BCS	2$
+	DEC	SLPOS
+	BRA	2$
+1$	ADDD	SLPOS+1
+	BCC	2$
+	INC	SLPOS
+2$	STD	SLPOS+1
+	LDD	SSVEL		add s axis screen velocity to position
+	BPL	3$
+	ADDD	SSPOS+1
+	BCS	4$
+	DEC	SSPOS
+	BRA	4$
+3$	ADDD	SSPOS+1
+	BCC	4$
+	INC	SSPOS
+4$	STD	SSPOS+1
+	LDB	PLYRANG		get player rotation angle
+	ADDB	#4		compute correct angle image
+	ANDB	#0F8
+	LDX	#IPLAYER
+	ABX
+	CMPX	OIDESC,Y	new image?
+	BEQ	5$
+	STX	ONIDESC,Y	yes, setup to change image
+	LDX	#CHGOBJ
+	STX	ODRWVEC,Y
+5$	LDA	OLPOS,Y		compute scanner screen l edges
+	RPT	1,LSRA
+	NEGA
+	STA	SCBEDGE		save scanner screen bottom edge
+	ADDA	#3A
+	STA	SCTEDGE		save scanner screen top edge
+	LDA	OSPOS,Y		compute scanner screen s edges
+	RPT	2,LSRA
+	NEGA
+	STA	SCLEDGE		save scanner screen left edge	
+	ADDA	#3F
+	STA	SCREDGE		save scanner screen right edge
+	LOCAL
+	DEC	FLASHTI		count down flashing ship timer
+	BPL	1$		time to erase?
+	LDD	#29.!<8+DCNS+DWBL yes, set timer to draw next and erase ship
+	BRA	2$
+1$	DEC	FLASHTI		count down flashing ship timer
+	BPL	3$		time to draw?
+	LDD	#28.!<8+DWBL	yes, set timer to erase next and draw ship
+2$	STA	FLASHTI		save new timer setting
+	LDA	SHIPS		get ship count
+	JSR	UPSHIPS		erase or draw it,  save none, uses none
+3$	LDA	RAPTIME		get rapid fire count, is it on?
+	BEQ	5$
+	DEC	RAPTIME		yes, count time
+	BNE	5$		time to fire
+	JSR	PLSHOOT		yes, fire a shot
+	LDX	#CONTFI		is continuous fire enabled?
+	JSR	RCMOSA
+	BEQ	5$
+	LDA	RAPRATE		yes, get rate
+	CMPA	#10.		at slowest?
+	BHS	4$
+	ADDA	#0		no, increase it (disabled for now)
+	STA	RAPRATE
+4$	STA	RAPTIME		set count
+5$	RTS
+
+* scan control panel
+SPANEL	LDA	PIA+6		read B side pia > uses A,B,X,Y,U
+	STA 	TEMP		save B side reads
+	EORA	SCAN		find B side changes
+	ANDA	PANMASK		mask switches
+	BNE	1$		any changes?
+	RTS
+1$	LDB	TEMP		yes, get B side reads
+	STB	SCAN		save B side reads
+	LDX	#PANEL		get B side table address
+	JMP	SSCAN		scan switches, save none, uses A,B,X,Y,U
+
+* overload handling
+VRLOAD	LDA	#-1		white background > uses none
+	STA	PCRAM
+	DEC	ESTATE
+	JMP	EXEC
+
+	PULLORG	ROMSAVE

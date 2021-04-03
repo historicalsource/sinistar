@@ -1,0 +1,158 @@
+	INCLUDE	[SAM]START
+	INCLVER	SAM,SINISTAR.EQU
+
+* player ship
+	PUSHORG	CPLAYER
+	FDB	MPLAYER		collision mask
+	FDB	4000!>LPLAYER	my collision type
+	FCB	LPLAYER		collision type
+	FDB	IRPlay		* Vector to initialization routine
+	FDB	KRPlay		* Vector to killing routine
+	PULLORG
+* planetoid 1
+	PUSHORG	CPLAN1
+	FDB	MPLANET		collision mask
+	FDB	4000!>LPLANET	my collision type
+	FCB	LPLANET		collision type
+	FDB	IRPl1		* Vector to initialization routine
+	FDB	KRPl1		* Vector to killing routine
+	PULLORG
+	PUSHORG	CPLAN1+OOFFSCR
+	FDB	VibOff		offscreen routine
+	PULLORG
+* planetoid 2
+	PUSHORG	CPLAN2
+	FDB	MPLANET		collision mask
+	FDB	4000!>LPLANET	my collision type
+	FCB	LPLANET		collision type
+	FDB	IRPl2		* Vector to initialization routine
+	FDB	KRPl2		* Vector to killing routine
+	PULLORG
+	PUSHORG	CPLAN2+OOFFSCR
+	FDB	VibOff		offscreen routine
+	PULLORG
+* planetoid 3
+	PUSHORG	CPLAN3
+	FDB	MPLANET		collision mask
+	FDB	4000!>LPLANET	my collision type
+	FCB	LPLANET		collision type
+	FDB	IRPl3		* Vector to initialization routine
+	FDB	KRPl3		* Vector to killing routine
+	PULLORG
+	PUSHORG	CPLAN3+OOFFSCR
+	FDB	VibOff		offscreen routine
+	PULLORG
+* planetoid 4
+	PUSHORG	CPLAN4
+	FDB	MPLANET		collision mask
+	FDB	4000!>LPLANET	my collision type
+	FCB	LPLANET		collision type
+	FDB	IRPl4		* Vector to initialization routine
+	FDB	KRPl4		* Vector to killing routine
+	PULLORG
+	PUSHORG	CPLAN4+OOFFSCR
+	FDB	VibOff		offscreen routine
+	PULLORG
+* planetoid 5
+	PUSHORG	CPLAN5
+	FDB	MPLANET		collision mask
+	FDB	4000!>LPLANET	my collision type
+	FCB	LPLANET		collision type
+	FDB	IRPl5		* Vector to initialization routine
+	FDB	KRPl5		* Vector to killing routine
+	PULLORG
+	PUSHORG	CPLAN5+OOFFSCR
+	FDB	VibOff		offscreen routine
+	PULLORG
+* sinibomb
+	PUSHORG	CSBOMB
+	FDB	MSBOMB		collision mask
+	FDB	4000!>LSBOMB	my collision type
+	FCB	LSBOMB		collision type
+	FDB	IRSBomb		* Vector to initialization routine
+	FDB	KRSBomb		* Vector to killing routine
+	PULLORG
+	Pushorg	CSBomb+OCDInd
+	fdb	DeathFlag
+	PullOrg
+* worker
+	PUSHORG	CWORKER
+	FDB	MWORKER		collision mask
+	FDB	4000!>LWORKER	my collision type
+	FCB	LWORKER		collision type
+	FDB	IRWork		* Vector to initialization routine
+	FDB	KRWork		* Vector to killing routine
+	PULLORG
+* warrior
+	PUSHORG	CWARRIO
+	FDB	MWARRIO		collision mask
+	FDB	4000!>LWARRIO	my collision type
+	FCB	LWARRIO		collision type
+	FDB	IRWarr		* Vector to initialization routine
+	FDB	KRWarr		* Vector to killing routine
+	PULLORG
+* sinistar
+	PUSHORG	CSINI
+	FDB	MSINI		collision mask
+	FDB	4000!>LSINI	my collision type
+	FCB	LSINI		collision type
+	FDB	IRSini		* Vector to initialization routine
+	FDB	KRSini		* Vector to killing routine
+	PULLORG
+	PUSHORG	CSINI+OOFFSCR
+	FDB	VibOff		offscreen routine
+	PULLORG
+* player shot
+	PUSHORG	CPLSHOT
+	FDB	MPLSHOT		collision mask
+	FDB	4000!>LPLSHOT	my collision type
+	FCB	LPLSHOT		collision type
+	PULLORG
+* warrior shot
+	PUSHORG	CWARSH
+	FDB	MWASHO		collision mask
+	FDB	4000!>LWASHO	my collision type
+	FCB	LWASHO		collision type
+	PULLORG
+* crystal
+	PUSHORG	CCRYSTA
+	FDB	MCRYSTA		collision mask
+	FDB	4000!>LCRYSTA	my collision type
+	FCB	LCRYSTA		collision type
+	FDB	IRCrys		* Vector to initialization routine
+	FDB	KRCrys		* Vector to killing routine
+	PULLORG
+* worker with crystal
+	PUSHORG	CWORKCR
+	FDB	MWORKCR		collision mask
+	FDB	4000!>LWORKCR	my collision type
+	FCB	LWORKCR		collision type
+	FDB	IRWoCr		* Vector to initialization routine
+	FDB	KRWoCr		* Vector to killing routine
+	PULLORG
+
+* make sure no fragments when piece explodes
+	PUSHORG	CPIECE
+	FDB	MFragment	collision mask
+	FDB	4000!>LFragment	my collision type bit
+	FCB	LFragment	collision type
+	FDB	TRAP		* Vector to initialization routine
+	FDB	KRPiec		* Vector to killing routine
+	PULLORG
+	PUSHORG	CPIECE+OONSCR
+	FDB	SPiecOn		onscreen routine
+	PULLORG
+	PushOrg	CPiece+OPFrag
+	fcb	0		* No fragments when a piece explodes
+	PullOrg
+
+	PUSHORG	CFragment
+	FDB	MFragment	collision mask
+	FDB	4000!>LFragment	my collision type bit
+	FCB	LFragment	collision type
+	FDB	TRAP		* Vector to initialization routine
+	FDB	TRAP		* Vector to killing routine
+	FCB	0		object mass
+	FDB	IPLSHOT		first image descriptor
+	FDB	KOBJECT		offscreen routine
+	PULLORG

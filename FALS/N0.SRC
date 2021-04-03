@@ -1,0 +1,23 @@
+*****
+*
+* This module checks that each of the symbols needed are defined.
+* If they weren't defined, the result would be that routines in this
+* directory would be created instead of replacing (overriding) the
+* stubs in earlier parts of the version release.
+*
+*****
+	SYMVER	MESLEN,MESLEN is missing from NOAHS.SYM
+	SYMVER	PHRLEN,PHRLEN is missing from NOAHS.SYM
+*
+	SYMVER	ADDVIB,AddVibration is missing from NOAHS.SYM
+	SYMVER	EXPOBJ,ExpObject is missing from NOAHS.SYM
+	SYMVER	GIVCRY,GivCrystal is missing from NOAHS.SYM
+	SYMVER	INCALL,InCaller is missing from NOAHS.SYM
+	SYMVER	INWARR,InWarrior is missing from NOAHS.SYM
+	SYMVER	KRCRYS,KRCrystal is missing from NOAHS.SYM
+	SYMVER	KRWORK,KRWorker is missing from NOAHS.SYM
+	SYMVER	POSBOU,PosBounce is missing from NOAHS.SYM
+	SYMVER	PREBOU,PreBounce is missing from NOAHS.SYM
+	SYMVER	RSTPOP,RstPop is missing from NOAHS.SYM
+	SYMVER	TAUNT,Taunt is missing from NOAHS.SYM
+

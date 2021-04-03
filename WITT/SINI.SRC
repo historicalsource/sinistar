@@ -1,0 +1,165 @@
+	PUSHORG	ROMSAVE
+*****
+*
+* SINI
+*	Intelligence routine for the Sinistar
+*
+* Needs:
+*	SinIndex -> Scanner workspace for the Sinistar
+*
+* Returns:
+*	NEVER - This task sleeps and wakes up again at the top.
+*
+*****
+	ROUTINE	Sini
+	pshs	A,B,X,Y,U	* Save work registers
+
+	ldd	Finish		* If the Sinistar is
+	cmpd	#Alive		*   not yet built up
+	lbne	99$		*   then it has no intelligence.
+
+	ldy	[SinIndex]	* Y -> scanner workspace
+	jsr	Think		* Effectively, thinking occurs
+	lbcs	99$		*   on the Task16 list.
+
+	jsr	upddtp		* Update distance to player (for explosion)
+	jsr	anisinistar	* Else, it goes "chomp, chomp, chomp ..."
+***
+*	The orbital approach is reduced from a large orbit to a small orbit,
+*	eventually reaching no orbit at all.
+***
+	ldb	OSPERS,Y	* The personality byte of the Sinistar reflects
+10$	lda	OSPERS,Y	*   the shooting inhibitor status.
+	andb	#PSiniInhibit	* If the inhibitor has already been cleared,
+	beq	12$		*   then it is not counted down any further.
+***
+* Orbital radius:
+*	0 1 2 3 4 5 ... MaxSinOrbit*3/4 ... MaxSinOrbit
+*			      +-------------------+ Reduced at any time.
+*	+---------------------+ Reduced only on screen.
+***
+	cmpb	#(MaxSinOrbit*3/4)	* If the inhibitor is still within
+	bgt	11$		*   the inner orbit (less than MaxSinOrbit*3/4)
+	jsr	ScreenChk	*   then wait until the Sinistar is on screen
+	bcs	12$		*   before reducing it any further.
+11$	decb			* Else, the inhibitor is counted down from its
+12$	pshs	B		*   maximum value and stored back into the
+	anda	#!N(PSiniInhib)	*   personality (leaving the rest of the
+	ora	,S+		*   traits unaffected, of course) and saved
+	sta	OSPERS,Y	*   for the next time the warrior awakens.
+*
+13$	tst	InStun		* If the Sinistar stun timer
+	beq	20$		*   is turned on then it must
+	dec	InStun		*   be counted down.
+***
+*	Chase the player!  (Ooooh!  It's scary boys and girls!)
+***
+20$	jsr	SiStopChk	* If the Sinistar is under the kind of
+	bcs	99$		*   duress that means it should stay still.
+*	Go ...
+	ldx	[SinIndex]	* Temporaily
+	LDD	SINLP		get sinistar last piece offsets
+	PSHS	D		save them
+	LDD	#412		offset for mouth
+	STD	SINLP
+	jsr	ReTarget	*   retarget the Sinistar
+	ldx	[PlaIndex]	* X -> pseudo scanner workspace of PLAYER
+	jsr	100$		* D = the LONG distance to player
+	jsr	newvel		* D = velocity to achieve
+	jsr	updlvel		* Update the long velocity
+*
+	ldx	[PlaIndex]	* X -> pseudo scanner workspace of PLAYER
+	jsr	200$		* D = the SHORT distance to player
+	jsr	newvel		* D = velocity to achieve
+	jsr	updsvel		* Update the short velocity
+	ldx	[SinIndex]	* Untarget the Sinistar to
+	jsr	UnTarget	*   restore it's correct coordinates.
+	PULS	D		restore sinistar last piece offsets
+	STD	SINLP
+
+99$	puls	A,B,X,Y,U	* Restore work registers
+	SLEEP	LOOP
+*
+100$	lda	OSPERS,Y
+	anda	#PSiniInhibit
+	beq	102$
+	ldb	SiniOrbit		* Set orbital directon.
+	cmpa	#MaxSinOrbit
+	ble	101$
+	lda	#MaxSinOrbit
+101$	jsr	getlodistance
+	ldx	#StblOSini
+	rts
+102$	jsr	getldistance
+	ldx	#STblSini
+	rts
+*
+200$	lda	OSPERS,Y
+	anda	#PSiniInhibit
+	beq	202$
+	ldb	SiniOrbit		* Set orbital directon.
+	cmpa	#MaxSinOrbit
+	ble	201$
+	lda	#MaxSinOrbit
+201$	jsr	getsodistance
+	ldx	#StblOSini
+	rts
+202$	jsr	getsdistance
+	ldx	#STblSini
+	rts
+*****
+*
+* SISTOPCHK
+*	Check if the Sinistar should stop.
+*
+* Needs:
+*	Y -> Sinistar scanner workspace
+*	InStun - (SET) When the Sinistar is stunned.
+*	AMDemo - (SET) The Sinistar does not chase when in demo mode.
+*	SinGrave - (SET) The Sinistar stops when dying (if on screen).
+*
+* Returns:
+*	CARRY CLEAR if it may KEEP GOING.
+*	CARRY  SET  if it SHOULD STOP.
+*
+*****
+	ROUTINE	SiStopChk
+	pshs	Y		* Save work registers
+***
+*	A stun should stop the Sinistar
+***
+	tst	InStun		* If stunned,
+	bne	77$		*   then zero the velocity.
+***
+*	A dying Sinistar should stop on screen.
+***
+	tst	SinGrave	* If the Sinistar is NOT dying,
+	beq	1$		*   then it should chase the player.
+	jsr	ScreenChk	* If the Sinistar IS dying,
+	bcc	77$		*   and on screen, then it should stop.
+***
+*	An attract mode demonstration Sinistar should stop on screen.
+***
+1$	tst	AMDemo		* If the Sinistar is NOT in a demo
+	beq	2$		*   then it can chase the player.
+	jsr	ScreenChk	* If the Sinistar IS in a demo,
+	bcc	77$		*   and on screen, then it should stop.
+*
+2$	andcc	#!N(CARRY)	* GO.  Return with the carry bit clear.
+	bra	99$
+*
+77$	clr	OSLVEL,Y	* Clear the scanner
+	clr	OSSVEL,Y	*   velocities.
+	ldy	OSSCWSA,Y	* If the Sinistar
+	beq	98$		*   is on screen,
+	CLRD			*   then clear
+	std	OLVEL,Y		*   the screen
+	std	OSVEL,Y		*   velocities.
+98$	orcc	#CARRY		* STOP.  Return with the carry bit set.
+99$	puls	Y		* Restore work registers
+	rts
+
+	PULLORG	ROMSAVE
+
+	INCLVER	RICH,anisini		* Sinistar animation
+	INCLVER	RICH,upddtc		* Update distance package

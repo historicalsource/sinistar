@@ -1,0 +1,142 @@
+
+	INCLUDE	[SAM]START
+	INCLVER	SAM,SINISTAR.EQU
+
+
+	PUSHORG	ROMSAVE
+
+* Here's the linker for the attract mode messages
+	VECTOR	INIVECT		Hook into game start
+	TST	AMDEMO		Test if this is game demo
+	BEQ	1$		  and skip if not
+
+	NEW_SLEEP	TASK4,ATTMSG,OMTLEN+1	* Make attract message task
+	NEW_SLEEP	TASK4,NATMSG,OMTLEN+1	* Make attract message task
+
+1$	RTS
+
+* These are the messages displayed at the top of the screen
+ATTMSG	JSR	PCLR2
+	LDA	#(60.*10.)/4
+	STA	OMTLEN,Y
+	SLEEP	HERE
+
+	DEC	OMTLEN,Y	* Count off a frame
+	BEQ	2$		*   of life for this task.
+	PSHS	A,B,X,Y		* Save message registers
+	TEXT	$6D,$4C
+	PHRASE	YELLOW,35,BLAST,CRYSTALS,OFF,PLANETOIDS
+	TEXT	$69,$20
+	PHRASE	YELLOW,35,PICK,UP,CRYSTALS,TO,FILL,BOMBBAY,WITH,SINIBOMBS
+	PULS	A,B,X,Y		* Restore message registers
+	SLEEP	LOOP
+
+2$	JSR	PCLR2
+	LDA	#(60.*10.)/4
+	STA	OMTLEN,Y
+	SLEEP	HERE
+
+	DEC	OMTLEN,Y	* Count off a frame
+	BEQ	3$		*   of life for this task.
+	PSHS	A,B,X,Y		* Save message registers
+	TEXT	$6D,$2A
+	PHRASE	YELLOW,35,FIRING,DOES,NOT,AFFECT,THE,MIGHTY
+	WORD	RED,35,SINISTAR
+	TEXT	$69,$32
+	PHRASE	YELLOW,35,ONLY,SINIBOMBS,CAN,AFFECT,THIS,NEMESIS
+	PULS	A,B,X,Y		* Restore message registers
+	SLEEP	LOOP
+
+3$	JSR	PCLR2
+	LDA	#(60.*13.)/4
+	STA	OMTLEN,Y
+	SLEEP	HERE
+
+	DEC	OMTLEN,Y	* Count off a frame
+	BEQ	4$		*   of life for this task.
+	PSHS	A,B,X,Y		* Save message registers
+	TEXT	$6D,$27
+	PHRASE	YELLOW,35,ONCE,THE
+	WORD	RED,35,SINISTAR
+	TEXT	$6D,$70
+	PHRASE	YELLOW,35,IS,BUILT,YOU,MUST,DESTROY,IT
+	TEXT	$69,$7C
+	PHRASE	YELLOW,35,OR
+	TEXT	$65,$5C
+	PHRASE	YELLOW,35,YOU,HAD,BETTER
+	WORD	RED,35,RUN
+	PULS	A,B,X,Y		* Restore message registers
+	SLEEP	LOOP
+
+4$	JSR	PCLR2
+	JMP	DIE
+
+******************************************************************************
+* PCLR2  
+*   A faster partial-screen clearer
+
+PCLR2	PSHS	D
+	LDD	#$0BFF!X$404
+	STD	DHIGH
+	LDD	#$6500
+	STD	DDEST
+	CLR	DCONS
+	LDA	#$11
+	STA	DCTRL
+
+	PULS	D,PC
+
+
+******************************************************************************
+* These are the messages displayed at the bottom of the screen
+*
+
+NATMSG	CLR	OMTLEN,Y
+
+	SLEEP	HERE
+
+	PSHS	Y
+
+	LDA	CREDIT
+	CMPA	OMTLEN,Y
+	BEQ	100$
+	STA	OMTLEN,Y
+	
+*   A faster partial-screen clearer
+	LDD	#$04FF!X$404
+	STD	DHIGH
+	LDD	#$1700
+	STD	DDEST
+	CLR	DCONS
+	LDA	#$11
+	STA	DCTRL
+
+100$	LDX	#ALHSTD
+	JSR	RCMOSA
+	BEQ	110$
+
+	TEXT	$1C,$3E
+	PHRASE	CREAM,35,PRESS,FIRE,BUTTON,TO,SEE,HIGH,SCORE
+
+110$	LDA	CREDIT
+	BEQ	2$
+	DECA
+	BEQ	1$
+
+	TEXT	$18,$52
+	PHRASE	CREAM,35,PRESS,1,OR,2,PLAYER,START
+	BRA	3$
+
+1$	TEXT	$18,$5C
+	PHRASE	CREAM,35,PRESS,1,PLAYER,START
+	BRA	3$
+
+2$	TEXT	$18,$5E
+	PHRASE	CREAM,35,INSERT,COIN,TO,PLAY
+
+3$	PULS	Y
+	SLEEP	LOOP
+
+
+
+	PULLORG	ROMSAVE

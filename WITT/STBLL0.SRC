@@ -1,0 +1,14 @@
+	INCLVER	RICH,table			* ORG Macro
+
+	PUSHORG	ROMSAVE
+***
+*	Warrior as squadron leader attack plan.
+*	Fly squadron right past player.
+***
+	TABLE	stblL0
+	fdb	(1536.),($0410),asrd3
+	fdb	(0000.),($0300),asrd4
+	PAD	(5.-((*-STblL0)/OSTblZ))*OSTblZ	* Pad entries
+	ENDTBL
+
+	PULLORG	ROMSAVE

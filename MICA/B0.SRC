@@ -1,0 +1,24 @@
+*****
+*
+* This module checks that each of the symbols needed are defined.
+* If they weren't defined, the result would be that routines in this
+* directory would be created instead of replacing (overriding) the
+* stubs in earlier parts of the version release.
+*
+*****
+	SYMVER	MESLEN,MESLEN	is missing from BOBS.SYM
+	SYMVER	PHRLEN,PHRLEN	is missing from BOBS.SYM
+*
+	SYMVER	KABOOM,KABOOM	is missing from BOBS.SYM
+	SYMVER	PLXQUE,PLXQUE	is missing from BOBS.SYM
+	SYMVER	WRXQUE,WRXQUE	is missing from BOBS.SYM
+	SYMVER	SNXQUE,SNXQUE	is missing from BOBS.SYM
+	SYMVER	HSTDEN,HSTDEN	is missing from BOBS.SYM
+	SYMVER	ATTRAC,ATTRAC	is missing from BOBS.SYM
+	SYMVER	STATPG,STATPG	is missing from BOBS.SYM
+	SYMVER	RSHS,RSHS	is missing from BOBS.SYM
+	SYMVER	AMSINI,AMSINI	is missing from BOBS.SYM
+	SYMVER	GAMOVE,GAMOVE	is missing from BOBS.SYM
+	SYMVER	OPENT,OPENT	is missing from BOBS.SYM
+	SYMVER	PNTSCR,PNTSCR	is missing from BOBS.SYM
+

@@ -18,11 +18,13 @@ of Sinistar for you.  So it is that the subdirectories for the main programmers
 contain their last development version of Sinistar.
 
 FILE ORGANIZATION
-	
-[.SAM]	Contains all the V17 files from Sam Dicker	\
-[.WITT]	Contains all the V17 files from Rich Witt	 \	Assembly order
-[.FALS]	Contains all the V17 files from Noah Falstein	 /	  of overlays.
-[.MICA]	Contains all the V17 files from Bob Mical	/
+
+Assembly order of overlays:
+
+[.SAM]	Contains all the V17 files from Sam Dicker	
+[.WITT]	Contains all the V17 files from Rich Witt	
+[.FALS]	Contains all the V17 files from Noah Falstein	 
+[.MICA]	Contains all the V17 files from Bob Mical	
 [.COM]	Contains a mangerie of related comand files from them all.
 
 At the top level, [LIBRARY.SINISTAR] you will find these main files:
